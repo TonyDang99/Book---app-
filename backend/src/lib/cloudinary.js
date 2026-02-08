@@ -8,4 +8,5 @@ cloudinary.config({
 });
 
 // them moi
+// end them moi
 export default cloudinary;
