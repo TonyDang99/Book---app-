@@ -5,9 +5,9 @@ export default function Index() {
   return (
     <View
       style={styles.container }>
-      <Text style={styles.title}>Edit app/index.tsx to edit</Text>
-      <Link href="/signup">Signup Page</Link>
-      <Link href="/login">Login Page</Link>
+      <Text style={styles.title}>Hello</Text>
+      <Link href="/(auth)/signup">Signup</Link>
+      <Link href="/(auth)/login">Login</Link>
     </View>
   );
 }
