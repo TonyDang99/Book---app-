@@ -1,6 +1,17 @@
-import React, { useState } from "react";
-import { View, Text, Image, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from "react-native";
+import { Link } from "expo-router";
 import styles from "../../assets/styles/login.styles";
+import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import COLORS from "../../constants/colors";
 
@@ -13,18 +24,20 @@ export default function Login() {
   const handleLogin = () => {};
   return (
     <View style={styles.container}>
-      <View style={styles.topIllustration}>
-        <Image
-        source={require("../../assets/images/i.png")}
-        style={styles.illustrationImage}
-        resizeMode="contain" 
-        />
-      </View>
+      {/* ILLUSTRATION */}
+        <View style={styles.topIllustration}>
+          <Image
+            source={require("../../assets/images/i.png")}
+            style={styles.illustrationImage}
+            resizeMode="contain"
+          />
+        </View>
 
       <View style = {styles.card}>
         <View style = {styles.formContainer}>
 
-           <View style={styles.inputGroup}>
+            {/* EMAIL */}
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
               <View style={styles.inputContainer}>
                 <Ionicons
@@ -44,7 +57,6 @@ export default function Login() {
                 />
               </View>
             </View>
-
         </View>
         </View>
     </View>
