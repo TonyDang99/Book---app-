@@ -66,6 +66,54 @@ export default function Signup() {
               </View>
             </View>
             
+             {/* PASSWORD INPUT */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={COLORS.primary}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="******"
+                  placeholderTextColor={COLORS.placeholderText}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color={COLORS.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+              {/* SIGNUP BUTTON */}
+            <TouchableOpacity style={styles.button} onPress={handleSignUp} disabled={isLoading}>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Sign Up</Text>
+              )}
+            </TouchableOpacity>
+
+             {/* FOOTER */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Already have an account?</Text>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text style={styles.link}>Login</Text>
+              </TouchableOpacity>
+            </View>
+
           </View>
 
               </View> 
