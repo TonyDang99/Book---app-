@@ -35,7 +35,7 @@ export default function Login() {
 
       <View style = {styles.card}>
         <View style = {styles.formContainer}>
-
+          {/* them vao day */}
             {/* EMAIL */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
