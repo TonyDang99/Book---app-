@@ -1,5 +1,5 @@
 import { View, Text, Platform, KeyboardAvoidingView, TextInput, TouchableOpacity, ActivityIndicator,
-  Alert, } from 'react-native';
+  Alert, Link } from 'react-native';
 import styles from "../../assets/styles/signup.styles";
 import { Ionicons } from "@expo/vector-icons";
 import COLORS from "../../constants/colors";
