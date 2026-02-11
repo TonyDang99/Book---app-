@@ -9,8 +9,19 @@ export default function Signup() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); 
+  const [showPassword, setShowPassword] = useState(false); 
+
+  const { user, isLoading, register, token } = useAuthStore();
+
+  const router = useRouter();
+
+
+  const handleSignUp = async () => {
+    const result = await register(username, email, password);
+
+    if (!result.success) Alert.alert("Error", result.error);
+  };
+
   return (
      <KeyboardAvoidingView
           style={{ flex: 1 }}
