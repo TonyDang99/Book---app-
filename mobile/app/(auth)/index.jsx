@@ -23,6 +23,10 @@ export default function Login() {
 
   const handleLogin = () => { };
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
     <View style={styles.container}>
       {/* ILLUSTRATION */}
       <View style={styles.topIllustration}>
@@ -110,5 +114,6 @@ export default function Login() {
         </View>
       </View>
       </View>
+      </KeyboardAvoidingView>
       );
 }
