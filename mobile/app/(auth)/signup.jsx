@@ -123,9 +123,14 @@ export default function Signup() {
              {/* FOOTER */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
-              <TouchableOpacity onPress={() => router.back()}>
+              {/* <TouchableOpacity onPress={() => router.back()}>
                 <Text style={styles.link}>Login</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
+              <Link href="/index" asChild>
+                <TouchableOpacity>
+                  <Text style={styles.link}>Login</Text>
+                </TouchableOpacity>
+              </Link>
             </View>
 
           </View>
