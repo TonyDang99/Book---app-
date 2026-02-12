@@ -1,5 +1,13 @@
-import { View, Text, Platform, KeyboardAvoidingView, TextInput, TouchableOpacity, ActivityIndicator,
-  Alert, Link } from 'react-native';
+import {
+  View,
+  Text,
+  Platform,
+  KeyboardAvoidingView,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import styles from "../../assets/styles/signup.styles";
 import { Ionicons } from "@expo/vector-icons";
 import COLORS from "../../constants/colors";
@@ -11,12 +19,11 @@ export default function Signup() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false); 
+  const [showPassword, setShowPassword] = useState(false);
 
   const { user, isLoading, register, token } = useAuthStore();
 
   const router = useRouter();
-
 
   const handleSignUp = async () => {
     const result = await register(username, email, password);
@@ -25,13 +32,13 @@ export default function Signup() {
   };
 
   return (
-     <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <View style={styles.container}>
-            <View style={styles.card}>
-              {/* HEADER */}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <View style={styles.container}>
+        <View style={styles.card}>
+          {/* HEADER */}
           <View style={styles.header}>
             <Text style={styles.title}>BookWorm🐛</Text>
             <Text style={styles.subtitle}>Share your favorite reads</Text>
@@ -58,6 +65,7 @@ export default function Signup() {
                 />
               </View>
             </View>
+
             {/* EMAIL INPUT */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
@@ -79,8 +87,8 @@ export default function Signup() {
                 />
               </View>
             </View>
-            
-             {/* PASSWORD INPUT */}
+
+            {/* PASSWORD INPUT */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputContainer}>
@@ -111,7 +119,7 @@ export default function Signup() {
               </View>
             </View>
 
-              {/* SIGNUP BUTTON */}
+            {/* SIGNUP BUTTON */}
             <TouchableOpacity style={styles.button} onPress={handleSignUp} disabled={isLoading}>
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
@@ -120,18 +128,16 @@ export default function Signup() {
               )}
             </TouchableOpacity>
 
-             {/* FOOTER */}
+            {/* FOOTER */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
               <TouchableOpacity onPress={() => router.back()}>
                 <Text style={styles.link}>Login</Text>
               </TouchableOpacity>
             </View>
-
           </View>
-
-              </View> 
-              </View>
+        </View>
+      </View>
     </KeyboardAvoidingView>
   );
 }
