@@ -8,10 +8,10 @@ const parseResponseBody = async (response) => {
     return JSON.parse(text);
   } catch {
     const trimmedText = text.trim();
-    const fallbackMessage = trimmedText.startsWith("<")
-      ? "Server returned an invalid response"
-      : trimmedText || "Server returned an invalid response";
-    throw new Error(fallbackMessage);
+    return {
+      _invalidJson: true,
+      message: trimmedText.startsWith("<") ? null : trimmedText,
+    };
   }
 };
 
@@ -28,7 +28,15 @@ export const fetchApi = async (path, options = {}) => {
   const data = await parseResponseBody(response);
 
   if (!response.ok) {
-    throw new Error(data?.message || `Request failed with status ${response.status}`);
+    const message = data?._invalidJson
+      ? `Request failed with status ${response.status}`
+      : data?.message || `Request failed with status ${response.status}`;
+
+    throw new Error(message);
+  }
+
+  if (data?._invalidJson) {
+    throw new Error(data.message || "Server returned an invalid response");
   }
 
   return data;

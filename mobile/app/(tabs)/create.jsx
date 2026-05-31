@@ -10,6 +10,7 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import styles from "../../assets/styles/create.styles";
@@ -20,6 +21,20 @@ import { useAuthStore } from "../../store/authStore";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { fetchApi } from "../../lib/api";
+
+const hasPhotoAccess = (permission) =>
+  permission?.granted || permission?.accessPrivileges === "limited";
+
+const showSettingsAlert = () => {
+  Alert.alert(
+    "Photo Permission Required",
+    "Photo access is turned off. Open Settings and allow photo access to upload a book image.",
+    [
+      { text: "Cancel", style: "cancel" },
+      { text: "Open Settings", onPress: () => Linking.openSettings() },
+    ]
+  );
+};
 
 export default function Create() {
   const [title, setTitle] = useState("");
@@ -36,12 +51,22 @@ export default function Create() {
 
   const pickImage = async () => {
     try {
-      // request permission if needed
       if (Platform.OS !== "web") {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        let permission = await ImagePicker.getMediaLibraryPermissionsAsync();
 
-        if (status !== "granted") {
-          Alert.alert("Permission Denied", "We need camera roll permissions to upload an image");
+        if (!hasPhotoAccess(permission) && permission.canAskAgain) {
+          permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        }
+
+        if (!hasPhotoAccess(permission)) {
+          if (!permission.canAskAgain) {
+            showSettingsAlert();
+          } else {
+            Alert.alert(
+              "Photo Permission Required",
+              "Allow photo access so you can upload a book image."
+            );
+          }
           return;
         }
       }
