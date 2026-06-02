@@ -18,13 +18,13 @@ import COLORS from "../../constants/colors";
 import { useAuthStore } from "../../store/authStore";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { isLoading, login, isCheckingAuth } = useAuthStore();
 
   const handleLogin = async () => {
-    const result = await login(email, password);
+    const result = await login(username, password);
 
     if (!result.success) Alert.alert("Error", result.error);
   };
@@ -48,23 +48,22 @@ export default function Login() {
 
         <View style={styles.card}>
           <View style={styles.formContainer}>
-            {/* EMAIL */}
+            {/* USERNAME */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>Username</Text>
               <View style={styles.inputContainer}>
                 <Ionicons
-                  name="mail-outline"
+                  name="person-outline"
                   size={20}
                   color={COLORS.primary}
                   style={styles.inputIcon}
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your email"
+                  placeholder="Enter your username"
                   placeholderTextColor={COLORS.placeholderText}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
+                  value={username}
+                  onChangeText={setUsername}
                   autoCapitalize="none"
                 />
               </View>

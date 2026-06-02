@@ -37,7 +37,7 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  login: async (email, password) => {
+  login: async (username, password) => {
     set({ isLoading: true });
 
     try {
@@ -47,7 +47,7 @@ export const useAuthStore = create((set) => ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
+          username,
           password,
         }),
       });

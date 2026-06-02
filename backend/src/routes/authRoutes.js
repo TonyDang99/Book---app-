@@ -67,12 +67,12 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!email || !password) return res.status(400).json({ message: "All fields are required" });
+    if (!username || !password) return res.status(400).json({ message: "All fields are required" });
 
     // check if user exists
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ username });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     // check if password is correct
