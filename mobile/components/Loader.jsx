@@ -1,6 +1,9 @@
 import { View, ActivityIndicator } from "react-native";
+import useTheme from "../hooks/useTheme";
 import COLORS from "../constants/colors";
+
 export default function Loader({ size = "large" }) {
+
   return (
     <View
       style={{

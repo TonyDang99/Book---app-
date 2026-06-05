@@ -4,6 +4,7 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
+  StyleSheet,
 } from "react-native";
 import { useAuthStore } from "../../store/authStore";
 
@@ -14,13 +15,15 @@ import styles from "../../assets/styles/home.styles";
 import { fetchApi } from "../../lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import { formatPublishDate } from "../../lib/utils";
-import COLORS from "../../constants/colors";
 import Loader from "../../components/Loader";
+import ThemeToggle from "../../components/ThemeToggle";
+import useTheme from "../../hooks/useTheme";
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function Home() {
   const { token } = useAuthStore();
+  const { colors, isDarkMode } = useTheme();
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,23 +74,34 @@ export default function Home() {
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.bookCard}>
+    <View
+      style={[
+        styles.bookCard,
+        {
+          backgroundColor: colors.cardBackground,
+          borderColor: colors.border,
+          shadowOpacity: isDarkMode ? 0.22 : 0.1,
+        },
+      ]}
+    >
       <View style={styles.bookHeader}>
         <View style={styles.userInfo}>
           <Image source={{ uri: item.user.profileImage }} style={styles.avatar} />
-          <Text style={styles.username}>{item.user.username}</Text>
+          <Text style={[styles.username, { color: colors.textPrimary }]}>{item.user.username}</Text>
         </View>
       </View>
 
-      <View style={styles.bookImageContainer}>
+      <View style={[styles.bookImageContainer, { backgroundColor: colors.border }]}>
         <Image source={item.image} style={styles.bookImage} contentFit="cover" />
       </View>
 
       <View style={styles.bookDetails}>
-        <Text style={styles.bookTitle}>{item.title}</Text>
+        <Text style={[styles.bookTitle, { color: colors.textPrimary }]}>{item.title}</Text>
         <View style={styles.ratingContainer}>{renderRatingStars(item.rating)}</View>
-        <Text style={styles.caption}>{item.caption}</Text>
-        <Text style={styles.date}>Shared on {formatPublishDate(item.createdAt)}</Text>
+        <Text style={[styles.caption, { color: colors.textDark }]}>{item.caption}</Text>
+        <Text style={[styles.date, { color: colors.textSecondary }]}>
+          Shared on {formatPublishDate(item.createdAt)}
+        </Text>
       </View>
     </View>
   );
@@ -100,7 +114,7 @@ export default function Home() {
           key={i}
           name={i <= rating ? "star" : "star-outline"}
           size={16}
-          color={i <= rating ? "#f4b400" : COLORS.textSecondary}
+          color={i <= rating ? "#f4b400" : colors.textSecondary}
           style={{ marginRight: 2 }}
         />
       );
@@ -111,7 +125,7 @@ export default function Home() {
   if (loading) return <Loader />;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={books}
         renderItem={renderItem}
@@ -122,31 +136,57 @@ export default function Home() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => fetchBooks(1, true)}
-            colors={[COLORS.primary]}
-            tintColor={COLORS.primary}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.1}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>BookWorm 🐛</Text>
-            <Text style={styles.headerSubtitle}>Discover great reads from the community👇</Text>
+            <View style={themeStyles.headerTop}>
+              <Text style={[styles.headerTitle, themeStyles.headerTitle, { color: colors.primary }]}>
+                BookWorm 🐛
+              </Text>
+              <ThemeToggle />
+            </View>
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+              Discover great reads from the community👇
+            </Text>
           </View>
         }
         ListFooterComponent={
           hasMore && books.length > 0 ? (
-            <ActivityIndicator style={styles.footerLoader} size="small" color={COLORS.primary} />
+            <ActivityIndicator style={styles.footerLoader} size="small" color={colors.primary} />
           ) : null
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="book-outline" size={60} color={COLORS.textSecondary} />
-            <Text style={styles.emptyText}>No recommendations yet</Text>
-            <Text style={styles.emptySubtext}>Be the first to share a book!</Text>
+            <Ionicons name="book-outline" size={60} color={colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: colors.textPrimary }]}>
+              No recommendations yet
+            </Text>
+            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+              Be the first to share a book!
+            </Text>
           </View>
         }
       />
     </View>
   );
 }
+
+const themeStyles = StyleSheet.create({
+  headerTop: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 8,
+  },
+  headerTitle: {
+    flex: 1,
+    marginBottom: 0,
+  },
+});
