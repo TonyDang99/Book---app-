@@ -146,13 +146,13 @@ export default function Home() {
           <View style={styles.header}>
             <View style={themeStyles.headerTop}>
               <Text style={[styles.headerTitle, themeStyles.headerTitle, { color: colors.primary }]}>
-                BookWorm 🐛
+                BookWorm 
               </Text>
               <ThemeToggle />
             </View>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            {/* <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
               Discover great reads from the community👇
-            </Text>
+            </Text> */}
           </View>
         }
         ListFooterComponent={
