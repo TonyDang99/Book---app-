@@ -1,11 +1,21 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import useTheme from "../hooks/useTheme";
 import { useThemeStore } from "../store/themeStore";
+import { useEffect, useRef } from "react";
 
 export default function ThemeToggle({ style }) {
   const { colors, isDarkMode } = useTheme();
   const toggleTheme = useThemeStore((state) => state.toggleTheme);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: isDarkMode ? 1 : 0,
+      duration: 400,
+      useNativeDriver: false,
+    }).start();
+  }, [isDarkMode, slideAnim]);
 
   return (
     <Pressable
@@ -21,16 +31,25 @@ export default function ThemeToggle({ style }) {
           borderColor: colors.border,
           shadowColor: colors.black,
           opacity: pressed ? 0.85 : 1,
+          overflow: "hidden",
         },
         style,
       ]}
     >
-      <View
+      <Animated.View
         style={[
           styles.iconWrap,
           {
             backgroundColor: isDarkMode ? colors.primary : colors.inputBackground,
             borderColor: colors.border,
+            transform: [
+              {
+                translateX: slideAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-14, 14],
+                }),
+              },
+            ],
           },
         ]}
       >
@@ -39,41 +58,30 @@ export default function ThemeToggle({ style }) {
           size={16}
           color={isDarkMode ? colors.white : colors.primary}
         />
-      </View>
-      <Text style={[styles.label, { color: colors.textPrimary }]}>
-        {isDarkMode ? "Dark" : "Light"}
-      </Text>
+      </Animated.View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   toggle: {
-    minWidth: 98,
+    width: 63,
     height: 40,
     borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: 6,
-    flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 2,
   },
   iconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 10,
-    borderWidth: 1,
+    width: 29,
+    height: 29,
+    borderRadius:20,
+    borderWidth: 3,
     alignItems: "center",
     justifyContent: "center",
-  },
-  label: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "700",
-    textAlign: "center",
   },
 });
