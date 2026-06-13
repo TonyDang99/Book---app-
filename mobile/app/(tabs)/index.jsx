@@ -5,8 +5,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
+  Pressable,
 } from "react-native";
 import { useAuthStore } from "../../store/authStore";
+import { useRouter } from "expo-router";
 
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
@@ -23,6 +25,7 @@ export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function Home() {
   const { token } = useAuthStore();
+  const router = useRouter();
   const { colors, isDarkMode } = useTheme();
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,9 +94,12 @@ export default function Home() {
         </View>
       </View>
 
-      <View style={[styles.bookImageContainer, { backgroundColor: colors.border }]}>
+      <Pressable
+        style={[styles.bookImageContainer, { backgroundColor: colors.border }]}
+        onPress={() => router.push(`/book/${item._id}`)}
+      >
         <Image source={item.image} style={styles.bookImage} contentFit="cover" />
-      </View>
+      </Pressable>
 
       <View style={styles.bookDetails}>
         <Text style={[styles.bookTitle, { color: colors.textPrimary }]}>{item.title}</Text>

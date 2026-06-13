@@ -1,13 +1,15 @@
 import express from "express";
 import cloudinary from "../lib/cloudinary.js";
 import Book from "../models/Book.js";
+import Comment from "../models/Comment.js";
 import protectRoute from "../middleware/auth.middleware.js";
+import { formatCommentResponse, REACTION_TYPES } from "../lib/commentUtils.js";
 
 const router = express.Router();
 
 router.post("/", protectRoute, async (req, res) => {
   try {
-    const { title, caption, rating, image } = req.body;
+    const { title, author, caption, rating, image } = req.body;
 
     if (!image || !title || !caption || !rating) {
       return res.status(400).json({ message: "Please provide all fields" });
@@ -20,6 +22,7 @@ router.post("/", protectRoute, async (req, res) => {
     // save to the database
     const newBook = new Book({
       title,
+      author: author?.trim() || "",
       caption,
       rating,
       image: imageUrl,
@@ -75,6 +78,105 @@ router.get("/user", protectRoute, async (req, res) => {
   }
 });
 
+router.get("/:id/comments", protectRoute, async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) return res.status(404).json({ message: "Book not found" });
+
+    const comments = await Comment.find({ book: req.params.id })
+      .sort({ createdAt: -1 })
+      .populate("user", "username profileImage");
+
+    res.json(comments.map((comment) => formatCommentResponse(comment, req.user._id)));
+  } catch (error) {
+    console.log("Error fetching comments", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/:id/comments", protectRoute, async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text?.trim()) {
+      return res.status(400).json({ message: "Comment cannot be empty" });
+    }
+
+    const book = await Book.findById(req.params.id);
+    if (!book) return res.status(404).json({ message: "Book not found" });
+
+    const comment = new Comment({
+      book: req.params.id,
+      user: req.user._id,
+      text: text.trim(),
+    });
+
+    await comment.save();
+    await comment.populate("user", "username profileImage");
+
+    res.status(201).json(formatCommentResponse(comment, req.user._id));
+  } catch (error) {
+    console.log("Error creating comment", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/:id/comments/:commentId/reactions", protectRoute, async (req, res) => {
+  try {
+    const { type } = req.body;
+
+    if (!REACTION_TYPES.includes(type)) {
+      return res.status(400).json({ message: "Invalid reaction type" });
+    }
+
+    const book = await Book.findById(req.params.id);
+    if (!book) return res.status(404).json({ message: "Book not found" });
+
+    const comment = await Comment.findOne({
+      _id: req.params.commentId,
+      book: req.params.id,
+    });
+
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+    const userId = req.user._id.toString();
+    const existingIndex = comment.reactions.findIndex(
+      (reaction) => reaction.user.toString() === userId
+    );
+
+    if (existingIndex >= 0) {
+      if (comment.reactions[existingIndex].type === type) {
+        comment.reactions.splice(existingIndex, 1);
+      } else {
+        comment.reactions[existingIndex].type = type;
+      }
+    } else {
+      comment.reactions.push({ user: req.user._id, type });
+    }
+
+    await comment.save();
+    await comment.populate("user", "username profileImage");
+
+    res.json(formatCommentResponse(comment, req.user._id));
+  } catch (error) {
+    console.log("Error reacting to comment", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.get("/:id", protectRoute, async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id).populate("user", "username profileImage");
+
+    if (!book) return res.status(404).json({ message: "Book not found" });
+
+    res.json(book);
+  } catch (error) {
+    console.log("Error fetching book", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 router.delete("/:id", protectRoute, async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
@@ -96,6 +198,7 @@ router.delete("/:id", protectRoute, async (req, res) => {
     }
 
     await book.deleteOne();
+    await Comment.deleteMany({ book: req.params.id });
 
     res.json({ message: "Book deleted successfully" });
   } catch (error) {

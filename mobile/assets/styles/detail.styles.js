@@ -1,0 +1,268 @@
+import { StyleSheet } from "react-native";
+
+const createStyles = (colors, isDarkMode = false) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.cardBackground,
+    },
+    backButton: {
+      padding: 4,
+      marginRight: 8,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 32,
+    },
+    title: {
+      fontSize: 26,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 8,
+    },
+    author: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginBottom: 16,
+    },
+    imageContainer: {
+      width: "100%",
+      height: 280,
+      borderRadius: 16,
+      overflow: "hidden",
+      backgroundColor: colors.border,
+      marginBottom: 16,
+    },
+    image: {
+      width: "100%",
+      height: "100%",
+    },
+    ratingContainer: {
+      flexDirection: "row",
+      marginBottom: 16,
+    },
+    captionCard: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 24,
+    },
+    captionLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      marginBottom: 8,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    caption: {
+      fontSize: 16,
+      lineHeight: 24,
+      color: colors.textDark,
+    },
+    sharedBy: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 12,
+    },
+    commentsSection: {
+      marginTop: 8,
+    },
+    commentsHeader: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 16,
+    },
+    commentCard: {
+      flexDirection: "row",
+      backgroundColor: colors.cardBackground,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    commentAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginRight: 10,
+    },
+    commentContent: {
+      flex: 1,
+    },
+    commentUsername: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    commentText: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.textDark,
+    },
+    commentTextFlex: {
+      flex: 1,
+    },
+    commentTextFull: {
+      flex: 1,
+    },
+    commentMessageRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    reactIconSlot: {
+      position: "relative",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    reactSmileButton: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      borderWidth: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    reactSmileEmoji: {
+      fontSize: 16,
+    },
+    commentDate: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 6,
+    },
+    reactionsWrap: {
+      marginTop: 10,
+    },
+    reactionSummary: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 8,
+    },
+    reactionIconsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    reactionBadge: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    reactionBadgeEmoji: {
+      fontSize: 12,
+    },
+    reactionCount: {
+      fontSize: 13,
+      marginLeft: 6,
+      fontWeight: "500",
+    },
+    reactionPicker: {
+      position: "absolute",
+      bottom: 36,
+      right: -4,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 8,
+      paddingVertical: 6,
+      borderRadius: 24,
+      borderWidth: 1,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDarkMode ? 0.3 : 0.12,
+      shadowRadius: 8,
+      elevation: 6,
+      zIndex: 10,
+      minWidth: 240,
+    },
+    reactionPickerItem: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    reactionPickerEmoji: {
+      fontSize: 24,
+    },
+    emptyComments: {
+      alignItems: "center",
+      paddingVertical: 24,
+    },
+    emptyCommentsText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 8,
+    },
+    commentInputRow: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      gap: 10,
+      marginTop: 8,
+    },
+    commentInput: {
+      flex: 1,
+      backgroundColor: colors.inputBackground,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      minHeight: 44,
+      maxHeight: 100,
+      color: colors.textDark,
+      fontSize: 15,
+    },
+    sendButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      width: 44,
+      height: 44,
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDarkMode ? 0.22 : 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    sendButtonDisabled: {
+      opacity: 0.5,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    errorText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginTop: 12,
+      textAlign: "center",
+    },
+  });
+
+export default createStyles;
