@@ -10,14 +10,17 @@ import {
   Alert,
 } from "react-native";
 import { Link } from "expo-router";
-import styles from "../../assets/styles/login.styles";
-import { useState } from "react";
+import createStyles from "../../assets/styles/login.styles";
+import { useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "../../constants/colors";
+import useTheme from "../../hooks/useTheme";
 
 import { useAuthStore } from "../../store/authStore";
 
 export default function Login() {
+  const { colors, isDarkMode } = useTheme();
+  const styles = useMemo(() => createStyles(colors, isDarkMode), [colors, isDarkMode]);
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -55,13 +58,13 @@ export default function Login() {
                 <Ionicons
                   name="person-outline"
                   size={20}
-                  color={COLORS.primary}
+                  color={colors.primary}
                   style={styles.inputIcon}
                 />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your username"
-                  placeholderTextColor={COLORS.placeholderText}
+                  placeholderTextColor={colors.placeholderText}
                   value={username}
                   onChangeText={setUsername}
                   autoCapitalize="none"
@@ -77,14 +80,14 @@ export default function Login() {
                 <Ionicons
                   name="lock-closed-outline"
                   size={20}
-                  color={COLORS.primary}
+                  color={colors.primary}
                   style={styles.inputIcon}
                 />
                 {/* INPUT */}
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your password"
-                  placeholderTextColor={COLORS.placeholderText}
+                  placeholderTextColor={colors.placeholderText}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -97,7 +100,7 @@ export default function Login() {
                   <Ionicons
                     name={showPassword ? "eye-outline" : "eye-off-outline"}
                     size={20}
-                    color={COLORS.primary}
+                    color={colors.primary}
                   />
                 </TouchableOpacity>
               </View>
@@ -105,7 +108,7 @@ export default function Login() {
 
             <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.white} />
               ) : (
                 <Text style={styles.buttonText}>Login</Text>
               )}

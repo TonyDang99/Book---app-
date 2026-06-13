@@ -1,7 +1,6 @@
-import { View, StyleSheet } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import COLORS from "../constants/colors";
-import useTheme from '../hooks/useTheme';
+import { View, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import useTheme from "../hooks/useTheme";
 
 
 export default function SafeScreen({children}) {
@@ -17,7 +16,6 @@ export default function SafeScreen({children}) {
   const styles = StyleSheet.create({
 
     container: {
-        flex: 1, 
-        backgroundColor: COLORS.background
+      flex: 1,
     },
 });

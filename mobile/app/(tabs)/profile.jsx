@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View,
   Alert,
@@ -11,16 +11,19 @@ import {
 import { useRouter } from "expo-router";
 import { fetchApi } from "../../lib/api";
 import { useAuthStore } from "../../store/authStore";
-import styles from "../../assets/styles/profile.styles";
+import createStyles from "../../assets/styles/profile.styles";
 import ProfileHeader from "../../components/ProfileHeader";
 import LogoutButton from "../../components/LogoutButton";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "../../constants/colors";
+import useTheme from "../../hooks/useTheme";
 import { Image } from "expo-image";
 import { sleep } from ".";
 import Loader from "../../components/Loader";
 
 export default function Profile() {
+  const { colors, isDarkMode } = useTheme();
+  const styles = useMemo(() => createStyles(colors, isDarkMode), [colors, isDarkMode]);
+
   const [books, setBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -90,9 +93,9 @@ export default function Profile() {
 
       <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDelete(item._id)}>
         {deleteBookId === item._id ? (
-          <ActivityIndicator size="small" color={COLORS.primary} />
+          <ActivityIndicator size="small" color={colors.primary} />
         ) : (
-          <Ionicons name="trash-outline" size={20} color={COLORS.primary} />
+          <Ionicons name="trash-outline" size={20} color={colors.primary} />
         )}
       </TouchableOpacity>
     </View>
@@ -106,7 +109,7 @@ export default function Profile() {
           key={i}
           name={i <= rating ? "star" : "star-outline"}
           size={14}
-          color={i <= rating ? "#f4b400" : COLORS.textSecondary}
+          color={i <= rating ? "#f4b400" : colors.textSecondary}
           style={{ marginRight: 2 }}
         />
       );
@@ -144,13 +147,13 @@ export default function Profile() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={[COLORS.primary]}
-            tintColor={COLORS.primary}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="book-outline" size={50} color={COLORS.textSecondary} />
+            <Ionicons name="book-outline" size={50} color={colors.textSecondary} />
             <Text style={styles.emptyText}>No recommendations yet</Text>
             <TouchableOpacity style={styles.addButton} onPress={() => router.push("/create")}>
               <Text style={styles.addButtonText}>Add Your First Book</Text>
