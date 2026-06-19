@@ -1,20 +1,26 @@
-import { useState } from "react";
-import { View, Text, Pressable, ActivityIndicator } from "react-native";
+import { useRef, useState } from "react";
+import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
 import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
 
 import { useAuthStore } from "../store/authStore";
 import { fetchApi } from "../lib/api";
 import { formatPublishDate } from "../lib/utils";
-import { REACTION_TYPES, REACTION_EMOJI } from "../constants/reactions";
+import {
+  REACTION_TYPES,
+  REACTION_EMOJI,
+  REACTION_LABEL,
+  REACTION_COLOR,
+} from "../constants/reactions";
 
 export default function CommentItem({ comment, bookId, colors, styles, onUpdate }) {
   const { token } = useAuthStore();
-  const [hovered, setHovered] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [reacting, setReacting] = useState(false);
+  const longPressOpenedPicker = useRef(false);
 
-  const showReactIcon = hovered || showPicker;
+  const activeReaction = comment.userReaction;
+  const actionLabel = activeReaction ? REACTION_LABEL[activeReaction] : "Like";
+  const actionColor = activeReaction ? REACTION_COLOR[activeReaction] : colors.textSecondary;
 
   const handleReaction = async (type) => {
     try {
@@ -30,98 +36,96 @@ export default function CommentItem({ comment, bookId, colors, styles, onUpdate 
 
       onUpdate(updated);
       setShowPicker(false);
-      setHovered(false);
     } catch (error) {
       console.log("Error reacting to comment", error);
+      Alert.alert("Error", error.message || "Failed to react to this comment");
     } finally {
       setReacting(false);
     }
   };
 
-  const handleHoverOut = () => {
-    if (!showPicker) setHovered(false);
+  const handleQuickReaction = () => {
+    if (longPressOpenedPicker.current) {
+      longPressOpenedPicker.current = false;
+      return;
+    }
+
+    handleReaction(activeReaction || "like");
+  };
+
+  const handleOpenPicker = () => {
+    longPressOpenedPicker.current = true;
+    setShowPicker(true);
   };
 
   return (
-    <Pressable
-      style={styles.commentCard}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={handleHoverOut}
-      onPressIn={() => setHovered(true)}
-      onPressOut={handleHoverOut}
-    >
+    <View style={styles.commentCard}>
       <Image source={{ uri: comment.user?.profileImage }} style={styles.commentAvatar} />
 
       <View style={styles.commentContent}>
         <Text style={styles.commentUsername}>{comment.user?.username}</Text>
 
-        <View style={styles.commentMessageRow}>
-          <Text style={[styles.commentText, !showReactIcon && styles.commentTextFull]}>
-            {comment.text}
-          </Text>
-
-          {showReactIcon && (
-            <View style={styles.reactIconSlot}>
-              <Pressable
-                onPress={() => setShowPicker((prev) => !prev)}
-                onHoverIn={() => setHovered(true)}
-                disabled={reacting}
-                style={({ pressed, hovered: iconHovered }) => [
-                  styles.reactSmileButton,
-                  {
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.border,
-                    opacity: pressed || iconHovered ? 1 : 0.92,
-                  },
-                ]}
-                accessibilityLabel="React to comment"
-                accessibilityRole="button"
-              >
-                {reacting ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : comment.userReaction ? (
-                  <Text style={styles.reactSmileEmoji}>{REACTION_EMOJI[comment.userReaction]}</Text>
-                ) : (
-                  <Ionicons name="happy-outline" size={18} color={colors.textSecondary} />
-                )}
-              </Pressable>
-
-              {showPicker && (
-                <View
-                  style={[
-                    styles.reactionPicker,
-                    {
-                      backgroundColor: colors.cardBackground,
-                      borderColor: colors.border,
-                      shadowColor: colors.black,
-                    },
-                  ]}
-                  onHoverIn={() => setHovered(true)}
-                >
-                  {REACTION_TYPES.map((type) => {
-                    const isActive = comment.userReaction === type;
-                    return (
-                      <Pressable
-                        key={type}
-                        onPress={() => handleReaction(type)}
-                        disabled={reacting}
-                        style={({ pressed }) => [
-                          styles.reactionPickerItem,
-                          isActive && { backgroundColor: colors.inputBackground },
-                          pressed && { transform: [{ scale: 1.15 }] },
-                        ]}
-                      >
-                        <Text style={styles.reactionPickerEmoji}>{REACTION_EMOJI[type]}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
-          )}
-        </View>
+        <Text style={styles.commentText}>{comment.text}</Text>
 
         <Text style={styles.commentDate}>{formatPublishDate(comment.createdAt)}</Text>
+
+        <View style={styles.commentActionsRow}>
+          <View style={styles.reactionActionWrap}>
+            <Pressable
+              onPress={handleQuickReaction}
+              onLongPress={handleOpenPicker}
+              delayLongPress={250}
+              disabled={reacting}
+              style={({ pressed }) => [
+                styles.reactionActionButton,
+                pressed && styles.reactionActionButtonPressed,
+              ]}
+              accessibilityLabel="React to comment"
+              accessibilityHint="Tap to like, or long press to choose a reaction"
+              accessibilityRole="button"
+            >
+              {reacting ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : activeReaction ? (
+                <Text style={styles.reactionActionEmoji}>{REACTION_EMOJI[activeReaction]}</Text>
+              ) : null}
+              <Text style={[styles.reactionActionText, { color: actionColor }]}>{actionLabel}</Text>
+            </Pressable>
+
+            {showPicker && (
+              <View
+                style={[
+                  styles.reactionPicker,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.border,
+                    shadowColor: colors.black,
+                  },
+                ]}
+              >
+                {REACTION_TYPES.map((type) => {
+                  const isActive = activeReaction === type;
+                  return (
+                    <Pressable
+                      key={type}
+                      onPress={() => handleReaction(type)}
+                      disabled={reacting}
+                      style={({ pressed }) => [
+                        styles.reactionPickerItem,
+                        isActive && { backgroundColor: colors.inputBackground },
+                        pressed && { transform: [{ scale: 1.15 }] },
+                      ]}
+                      accessibilityLabel={REACTION_LABEL[type]}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.reactionPickerEmoji}>{REACTION_EMOJI[type]}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        </View>
 
         {comment.totalReactions > 0 && (
           <View style={styles.reactionSummary}>
@@ -149,6 +153,6 @@ export default function CommentItem({ comment, bookId, colors, styles, onUpdate 
           </View>
         )}
       </View>
-    </Pressable>
+    </View>
   );
 }

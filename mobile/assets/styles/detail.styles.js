@@ -119,32 +119,33 @@ const createStyles = (colors, isDarkMode = false) =>
       lineHeight: 20,
       color: colors.textDark,
     },
-    commentTextFlex: {
-      flex: 1,
-    },
-    commentTextFull: {
-      flex: 1,
-    },
-    commentMessageRow: {
+    commentActionsRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
+      marginTop: 8,
     },
-    reactIconSlot: {
+    reactionActionWrap: {
       position: "relative",
-      justifyContent: "center",
-      alignItems: "center",
     },
-    reactSmileButton: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      borderWidth: 1,
-      justifyContent: "center",
+    reactionActionButton: {
+      minHeight: 30,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      flexDirection: "row",
       alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
     },
-    reactSmileEmoji: {
+    reactionActionButtonPressed: {
+      backgroundColor: colors.inputBackground,
+    },
+    reactionActionEmoji: {
       fontSize: 16,
+    },
+    reactionActionText: {
+      fontSize: 13,
+      fontWeight: "700",
     },
     commentDate: {
       fontSize: 12,
@@ -181,8 +182,8 @@ const createStyles = (colors, isDarkMode = false) =>
     },
     reactionPicker: {
       position: "absolute",
-      bottom: 36,
-      right: -4,
+      bottom: 34,
+      left: 0,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
@@ -195,7 +196,7 @@ const createStyles = (colors, isDarkMode = false) =>
       shadowRadius: 8,
       elevation: 6,
       zIndex: 10,
-      minWidth: 240,
+      minWidth: 252,
     },
     reactionPickerItem: {
       width: 40,
