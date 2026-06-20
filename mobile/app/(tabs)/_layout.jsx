@@ -1,8 +1,16 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { Platform, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useEffect, useState } from "react";
 import useTheme from "../../hooks/useTheme";
 
 const withAlpha = (hex, alpha) => {
@@ -16,11 +24,7 @@ const withAlpha = (hex, alpha) => {
 };
 
 export default function TabLayout() {
-  const insets = useSafeAreaInsets();
-  const { colors, isDarkMode } = useTheme();
-  const tabBottomOffset = Math.max(insets.bottom, 12);
-  const glassBackground = withAlpha(colors.cardBackground, isDarkMode ? 0.52 : 0.68);
-  const glassBorder = withAlpha(colors.white, isDarkMode ? 0.16 : 0.62);
+  const { colors } = useTheme();
 
   return (
     <Tabs
@@ -33,36 +37,8 @@ export default function TabLayout() {
           fontWeight: "600",
         },
         headerShadowVisible: false,
-        tabBarLabelStyle: styles.tabBarLabel,
-        tabBarItemStyle: styles.tabBarItem,
-        tabBarStyle: {
-          position: "absolute",
-          left: 16,
-          right: 16,
-          bottom: tabBottomOffset,
-          height: 66,
-          paddingTop: 8,
-          paddingBottom: 8,
-          borderTopWidth: 0,
-          borderWidth: 1,
-          borderColor: glassBorder,
-          borderRadius: 28,
-          backgroundColor: Platform.OS === "ios" ? "transparent" : glassBackground,
-          overflow: "hidden",
-          shadowColor: colors.black,
-          shadowOffset: { width: 0, height: 14 },
-          shadowOpacity: isDarkMode ? 0.35 : 0.14,
-          shadowRadius: 24,
-          elevation: 14,
-        },
-        tabBarBackground: () => (
-          <GlassTabBarBackground
-            backgroundColor={glassBackground}
-            highlightColor={withAlpha(colors.white, isDarkMode ? 0.08 : 0.36)}
-            tint={isDarkMode ? "dark" : "light"}
-          />
-        ),
       }}
+      tabBar={(props) => <LiquidGlassTabBar {...props} />}
     >
       <Tabs.Screen
         name="index"
@@ -99,19 +75,231 @@ export default function TabLayout() {
   );
 }
 
-function GlassTabBarBackground({ backgroundColor, highlightColor, tint }) {
+function LiquidGlassTabBar({ state, descriptors, navigation }) {
+  const insets = useSafeAreaInsets();
+  const { colors, isDarkMode } = useTheme();
+  const [barWidth, setBarWidth] = useState(0);
+  const activeIndex = useSharedValue(state.index);
+  const morphScale = useSharedValue(1);
+
+  const horizontalPadding = 8;
+  const itemWidth = barWidth > 0 ? (barWidth - horizontalPadding * 2) / state.routes.length : 0;
+  const glassBackground = withAlpha(colors.cardBackground, isDarkMode ? 0.5 : 0.66);
+  const glassBorder = withAlpha(colors.white, isDarkMode ? 0.18 : 0.64);
+  const activeGlass = withAlpha(colors.white, isDarkMode ? 0.12 : 0.42);
+  const activeGlow = withAlpha(colors.primary, isDarkMode ? 0.18 : 0.12);
+
+  useEffect(() => {
+    activeIndex.value = withSpring(state.index, {
+      damping: 18,
+      stiffness: 180,
+      mass: 0.8,
+    });
+    morphScale.value = withSequence(
+      withTiming(1.14, { duration: 110 }),
+      withSpring(1, { damping: 14, stiffness: 180 })
+    );
+  }, [activeIndex, morphScale, state.index]);
+
+  const activeLensStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: activeIndex.value * itemWidth },
+      { scaleX: morphScale.value },
+      { scaleY: 2 - morphScale.value },
+    ],
+  }));
+
   return (
-    <BlurView intensity={64} tint={tint} style={StyleSheet.absoluteFill}>
-      <View style={[StyleSheet.absoluteFill, { backgroundColor }]} />
-      <View style={[styles.glassHighlight, { backgroundColor: highlightColor }]} />
-    </BlurView>
+    <View
+      pointerEvents="box-none"
+      style={[
+        styles.tabBarDock,
+        {
+          bottom: Math.max(insets.bottom, 12),
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.tabBarShell,
+          {
+            borderColor: glassBorder,
+            shadowColor: colors.black,
+            shadowOpacity: isDarkMode ? 0.36 : 0.16,
+          },
+        ]}
+        onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
+      >
+        <BlurView intensity={72} tint={isDarkMode ? "dark" : "light"} style={StyleSheet.absoluteFill}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: glassBackground }]} />
+          <View
+            style={[
+              styles.glassHighlight,
+              { backgroundColor: withAlpha(colors.white, isDarkMode ? 0.08 : 0.38) },
+            ]}
+          />
+        </BlurView>
+
+        {itemWidth > 0 && (
+          <Animated.View
+            style={[
+              styles.activeLens,
+              {
+                left: horizontalPadding,
+                width: itemWidth,
+                backgroundColor: activeGlass,
+                borderColor: withAlpha(colors.white, isDarkMode ? 0.18 : 0.7),
+                shadowColor: colors.primary,
+                shadowOpacity: isDarkMode ? 0.24 : 0.18,
+              },
+              activeLensStyle,
+            ]}
+          >
+            <View style={[styles.activeLensGlow, { backgroundColor: activeGlow }]} />
+          </Animated.View>
+        )}
+
+        <View style={styles.tabItemsRow}>
+          {state.routes.map((route, index) => {
+            const { options } = descriptors[route.key];
+            const isFocused = state.index === index;
+            const color = isFocused ? colors.primary : colors.textSecondary;
+
+            const onPress = () => {
+              const event = navigation.emit({
+                type: "tabPress",
+                target: route.key,
+                canPreventDefault: true,
+              });
+
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.navigate(route.name, route.params);
+              }
+            };
+
+            const onLongPress = () => {
+              navigation.emit({
+                type: "tabLongPress",
+                target: route.key,
+              });
+            };
+
+            return (
+              <LiquidTabButton
+                key={route.key}
+                route={route}
+                options={options}
+                isFocused={isFocused}
+                color={color}
+                onPress={onPress}
+                onLongPress={onLongPress}
+              />
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function LiquidTabButton({ route, options, isFocused, color, onPress, onLongPress }) {
+  const iconProgress = useSharedValue(isFocused ? 1 : 0);
+
+  const label =
+    options.tabBarLabel !== undefined
+      ? options.tabBarLabel
+      : options.title !== undefined
+        ? options.title
+        : route.name;
+
+  useEffect(() => {
+    iconProgress.value = withSpring(isFocused ? 1 : 0, {
+      damping: 16,
+      stiffness: 180,
+      mass: 0.7,
+    });
+  }, [iconProgress, isFocused]);
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: -2 * iconProgress.value },
+      { scale: 1 + iconProgress.value * 0.1 },
+    ],
+  }));
+
+  const labelStyle = useAnimatedStyle(() => ({
+    opacity: 0.72 + iconProgress.value * 0.28,
+    transform: [{ translateY: -iconProgress.value }],
+  }));
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={options.tabBarAccessibilityLabel}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={styles.tabButton}
+    >
+      <Animated.View style={iconStyle}>
+        {options.tabBarIcon?.({ focused: isFocused, color, size: 23 })}
+      </Animated.View>
+      <Animated.Text style={[styles.tabBarLabel, { color }, labelStyle]} numberOfLines={1}>
+        {label}
+      </Animated.Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  tabBarItem: {
-    borderRadius: 22,
-    marginHorizontal: 4,
+  tabBarDock: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    height: 70,
+  },
+  tabBarShell: {
+    flex: 1,
+    borderRadius: 30,
+    borderWidth: 1,
+    overflow: "hidden",
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 26,
+    elevation: 14,
+  },
+  tabItemsRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  tabButton: {
+    flex: 1,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 24,
+    gap: 2,
+  },
+  activeLens: {
+    position: "absolute",
+    top: 8,
+    bottom: 8,
+    borderRadius: 24,
+    borderWidth: 1,
+    overflow: "hidden",
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  activeLensGlow: {
+    position: "absolute",
+    left: 10,
+    right: 10,
+    bottom: -10,
+    height: 22,
+    borderRadius: 11,
   },
   tabBarLabel: {
     fontSize: 11,
