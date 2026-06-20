@@ -196,7 +196,7 @@ const createStyles = (colors, isDarkMode = false) =>
       shadowRadius: 8,
       elevation: 6,
       zIndex: 10,
-      minWidth: 252,
+      minWidth: 294,
     },
     reactionPickerItem: {
       width: 40,

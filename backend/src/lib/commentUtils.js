@@ -1,9 +1,10 @@
-export const REACTION_TYPES = ["like", "love", "haha", "wow", "sad", "angry"];
+export const REACTION_TYPES = ["like", "love", "care", "haha", "wow", "sad", "angry"];
 
 export const getReactionSummary = (reactions = [], userId) => {
   const reactionCounts = {
     like: 0,
     love: 0,
+    care: 0,
     haha: 0,
     wow: 0,
     sad: 0,
