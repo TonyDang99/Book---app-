@@ -130,6 +130,8 @@ export default function BookDetail() {
     );
   }
 
+  const recommendationAuthor = book.author?.trim() || book.user?.username || "Unknown Author";
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -144,7 +146,7 @@ export default function BookDetail() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>{book.title}</Text>
-        <Text style={styles.author}>by {book.author?.trim() || "Unknown Author"}</Text>
+        <Text style={styles.author}>by {recommendationAuthor}</Text>
 
         <View style={styles.imageContainer}>
           <Image source={book.image} style={styles.image} contentFit="cover" />

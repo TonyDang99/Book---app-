@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.post("/", protectRoute, async (req, res) => {
   try {
-    const { title, author, caption, rating, image } = req.body;
+    const { title, caption, rating, image } = req.body;
 
     if (!image || !title || !caption || !rating) {
       return res.status(400).json({ message: "Please provide all fields" });
@@ -22,7 +22,7 @@ router.post("/", protectRoute, async (req, res) => {
     // save to the database
     const newBook = new Book({
       title,
-      author: author?.trim() || "",
+      author: req.user.username,
       caption,
       rating,
       image: imageUrl,

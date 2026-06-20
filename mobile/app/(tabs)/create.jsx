@@ -41,7 +41,6 @@ export default function Create() {
   const styles = useMemo(() => createStyles(colors, isDarkMode), [colors, isDarkMode]);
 
   const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
   const [caption, setCaption] = useState("");
   const [rating, setRating] = useState(3);
   const [image, setImage] = useState(null); // to display the selected image
@@ -107,7 +106,7 @@ export default function Create() {
   };
 
   const handleSubmit = async () => {
-    if (!title || !author || !caption || !imageBase64 || !rating) {
+    if (!title || !caption || !imageBase64 || !rating) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
@@ -130,7 +129,6 @@ export default function Create() {
         },
         body: JSON.stringify({
           title,
-          author,
           caption,
           rating: rating.toString(),
           image: imageDataUrl,
@@ -139,7 +137,6 @@ export default function Create() {
 
       Alert.alert("Success", "Your book recommendation has been posted!");
       setTitle("");
-      setAuthor("");
       setCaption("");
       setRating(3);
       setImage(null);
@@ -199,26 +196,6 @@ export default function Create() {
                   placeholderTextColor={colors.placeholderText}
                   value={title}
                   onChangeText={setTitle}
-                />
-              </View>
-            </View>
-
-            {/* AUTHOR */}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Author</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color={colors.textSecondary}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter author name"
-                  placeholderTextColor={colors.placeholderText}
-                  value={author}
-                  onChangeText={setAuthor}
                 />
               </View>
             </View>
