@@ -2,7 +2,7 @@ import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fetchApi } from "../lib/api";
 
-export const useAuthStore = create((set) => ({
+export const useAuthStore = create((set, get) => ({
   user: null,
   token: null,
   isLoading: false,
@@ -84,5 +84,26 @@ export const useAuthStore = create((set) => ({
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("user");
     set({ token: null, user: null });
+  },
+
+  updateProfileImage: async (imageDataUrl) => {
+    const token = get().token;
+    if (!token) throw new Error("You must be logged in to update your profile");
+
+    const data = await fetchApi("/auth/profile", {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ image: imageDataUrl }),
+    });
+
+    if (!data?.user) throw new Error("Server did not return updated user data");
+
+    await AsyncStorage.setItem("user", JSON.stringify(data.user));
+    set({ user: data.user });
+
+    return { success: true };
   },
 }));

@@ -42,7 +42,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow BookWorm to access your photos so you can upload book images.",
+          "photosPermission": "Allow BookWorm to access your photos so you can set your profile picture and upload book images.",
           "cameraPermission": false,
           "microphonePermission": false
         }

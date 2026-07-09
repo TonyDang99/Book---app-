@@ -1,6 +1,8 @@
 import express from "express";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
+import cloudinary from "../lib/cloudinary.js";
+import protectRoute from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
@@ -93,6 +95,33 @@ router.post("/login", async (req, res) => {
     });
   } catch (error) {
     console.log("Error in login route", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.patch("/profile", protectRoute, async (req, res) => {
+  try {
+    const { image } = req.body;
+
+    if (!image) {
+      return res.status(400).json({ message: "Image is required" });
+    }
+
+    const uploadResponse = await cloudinary.uploader.upload(image);
+    req.user.profileImage = uploadResponse.secure_url;
+    await req.user.save();
+
+    res.status(200).json({
+      user: {
+        id: req.user._id,
+        username: req.user.username,
+        email: req.user.email,
+        profileImage: req.user.profileImage,
+        createdAt: req.user.createdAt,
+      },
+    });
+  } catch (error) {
+    console.log("Error in profile update route", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
