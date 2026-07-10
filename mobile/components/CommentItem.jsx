@@ -67,6 +67,11 @@ export default function CommentItem({
   };
 
   const handleQuickReaction = () => {
+    if (showPicker) {
+      dismissReactionPicker();
+      return;
+    }
+
     if (longPressOpenedPicker.current) {
       longPressOpenedPicker.current = false;
       return;
@@ -78,6 +83,11 @@ export default function CommentItem({
   const handleOpenPicker = () => {
     longPressOpenedPicker.current = true;
     setShowPicker(true);
+  };
+
+  const dismissReactionPicker = () => {
+    longPressOpenedPicker.current = false;
+    setShowPicker(false);
   };
 
   const handleSubmitReply = async () => {
@@ -106,7 +116,7 @@ export default function CommentItem({
   };
 
   const openReplyComposer = () => {
-    setShowPicker(false);
+    dismissReactionPicker();
     setIsReplying(true);
   };
 
@@ -125,11 +135,18 @@ export default function CommentItem({
       </Pressable>
 
       <View style={styles.commentContent}>
-        <Text style={styles.commentUsername}>{comment.user?.username}</Text>
+        <Pressable
+          onPress={dismissReactionPicker}
+          disabled={!showPicker}
+          accessibilityRole={showPicker ? "button" : undefined}
+          accessibilityLabel={showPicker ? "Close reaction picker" : undefined}
+        >
+          <Text style={styles.commentUsername}>{comment.user?.username}</Text>
 
-        <Text style={styles.commentText}>{comment.text}</Text>
+          <Text style={styles.commentText}>{comment.text}</Text>
 
-        <Text style={styles.commentDate}>{formatPublishDate(comment.createdAt)}</Text>
+          <Text style={styles.commentDate}>{formatPublishDate(comment.createdAt)}</Text>
+        </Pressable>
 
         <View style={styles.commentActionsRow}>
           <View style={styles.reactionActionWrap}>
@@ -200,6 +217,17 @@ export default function CommentItem({
                 </Pressable>
               );
             })}
+            <Pressable
+              onPress={dismissReactionPicker}
+              style={({ pressed }) => [
+                styles.reactionPickerClose,
+                pressed && styles.reactionPickerItemPressed,
+              ]}
+              accessibilityLabel="Close reaction picker"
+              accessibilityRole="button"
+            >
+              <Ionicons name="close" size={18} color={colors.textSecondary} />
+            </Pressable>
           </View>
         )}
 

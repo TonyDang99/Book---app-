@@ -238,6 +238,16 @@ const createStyles = (colors, isDarkMode = false) =>
       backgroundColor: colors.cardBackground,
       transform: [{ scale: 0.92 }],
     },
+    reactionPickerClose: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
     reactionPickerEmoji: {
       fontSize: 20,
     },
