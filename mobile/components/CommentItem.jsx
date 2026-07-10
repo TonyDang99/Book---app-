@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 
 import { useAuthStore } from "../store/authStore";
 import { fetchApi } from "../lib/api";
@@ -14,6 +15,7 @@ import {
 
 export default function CommentItem({ comment, bookId, colors, styles, onUpdate }) {
   const { token } = useAuthStore();
+  const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
   const [reacting, setReacting] = useState(false);
   const longPressOpenedPicker = useRef(false);
@@ -60,7 +62,14 @@ export default function CommentItem({ comment, bookId, colors, styles, onUpdate 
 
   return (
     <View style={styles.commentCard}>
-      <Image source={{ uri: comment.user?.profileImage }} style={styles.commentAvatar} />
+      <Pressable
+        onPress={() => comment.user?._id && router.push(`/user/${comment.user._id}`)}
+        hitSlop={6}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${comment.user?.username || "user"}'s profile`}
+      >
+        <Image source={{ uri: comment.user?.profileImage }} style={styles.commentAvatar} />
+      </Pressable>
 
       <View style={styles.commentContent}>
         <Text style={styles.commentUsername}>{comment.user?.username}</Text>

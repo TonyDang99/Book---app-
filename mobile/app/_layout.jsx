@@ -50,6 +50,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="book" />
+          <Stack.Screen name="user" />
         </Stack>
       </SafeScreen>
       <StatusBar style={mode === "dark" ? "light" : "dark"} />

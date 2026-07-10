@@ -146,7 +146,19 @@ export default function BookDetail() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>{book.title}</Text>
-        <Text style={styles.author}>by {recommendationAuthor}</Text>
+        <View style={styles.authorRow}>
+          {book.user && (
+            <TouchableOpacity
+              onPress={() => router.push(`/user/${book.user._id}`)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${recommendationAuthor}'s profile`}
+            >
+              <Image source={{ uri: book.user.profileImage }} style={styles.authorAvatar} />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.author}>by {recommendationAuthor}</Text>
+        </View>
 
         <View style={styles.imageContainer}>
           <Image source={book.image} style={styles.image} contentFit="cover" />

@@ -34,10 +34,21 @@ const createStyles = (colors, isDarkMode = false) =>
       color: colors.textPrimary,
       marginBottom: 8,
     },
+    authorRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    authorAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginRight: 10,
+      backgroundColor: colors.inputBackground,
+    },
     author: {
       fontSize: 16,
       color: colors.textSecondary,
-      marginBottom: 16,
     },
     imageContainer: {
       width: "100%",

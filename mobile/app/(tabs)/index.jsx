@@ -89,7 +89,14 @@ export default function Home() {
     >
       <View style={styles.bookHeader}>
         <View style={styles.userInfo}>
-          <Image source={{ uri: item.user.profileImage }} style={styles.avatar} />
+          <Pressable
+            onPress={() => router.push(`/user/${item.user._id}`)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${item.user.username}'s profile`}
+          >
+            <Image source={{ uri: item.user.profileImage }} style={styles.avatar} />
+          </Pressable>
           <Text style={[styles.username, { color: colors.textPrimary }]}>{item.user.username}</Text>
         </View>
       </View>
