@@ -42,3 +42,30 @@ export const formatCommentResponse = (comment, userId) => {
     ...summary,
   };
 };
+
+const getId = (value) => value?._id?.toString() || value?.toString();
+
+export const buildCommentThreads = (comments, userId) => {
+  const formattedComments = comments.map((comment) => ({
+    ...formatCommentResponse(comment, userId),
+    replies: [],
+  }));
+  const commentsById = new Map(
+    formattedComments.map((comment) => [getId(comment._id), comment])
+  );
+  const topLevelComments = [];
+
+  for (const comment of formattedComments) {
+    const parentId = getId(comment.parentComment);
+    const parentComment = parentId ? commentsById.get(parentId) : null;
+
+    if (parentComment) {
+      parentComment.replies.push(comment);
+    } else {
+      topLevelComments.push(comment);
+    }
+  }
+
+  // The query is oldest first so replies read naturally; keep newest threads first.
+  return topLevelComments.reverse();
+};

@@ -66,9 +66,35 @@ export default function BookDetail() {
   }, [fetchBookDetails]);
 
   const handleCommentUpdate = (updatedComment) => {
-    setComments((prev) =>
-      prev.map((comment) => (comment._id === updatedComment._id ? updatedComment : comment))
-    );
+    const updateInThread = (thread) =>
+      thread.map((comment) => {
+        if (comment._id === updatedComment._id) {
+          return { ...comment, ...updatedComment, replies: comment.replies || [] };
+        }
+
+        return {
+          ...comment,
+          replies: updateInThread(comment.replies || []),
+        };
+      });
+
+    setComments((prev) => updateInThread(prev));
+  };
+
+  const handleReplyAdded = (parentCommentId, reply) => {
+    const addReplyToThread = (thread) =>
+      thread.map((comment) => {
+        if (comment._id === parentCommentId) {
+          return { ...comment, replies: [...(comment.replies || []), reply] };
+        }
+
+        return {
+          ...comment,
+          replies: addReplyToThread(comment.replies || []),
+        };
+      });
+
+    setComments((prev) => addReplyToThread(prev));
   };
 
   const handleSubmitComment = async () => {
@@ -131,6 +157,9 @@ export default function BookDetail() {
   }
 
   const recommendationAuthor = book.author?.trim() || book.user?.username || "Unknown Author";
+  const countComments = (thread) =>
+    thread.reduce((total, comment) => total + 1 + countComments(comment.replies || []), 0);
+  const commentCount = countComments(comments);
 
   return (
     <KeyboardAvoidingView
@@ -177,7 +206,7 @@ export default function BookDetail() {
         </View>
 
         <View style={styles.commentsSection}>
-          <Text style={styles.commentsHeader}>Comments ({comments.length})</Text>
+          <Text style={styles.commentsHeader}>Comments ({commentCount})</Text>
 
           {comments.length === 0 ? (
             <View style={styles.emptyComments}>
@@ -193,6 +222,7 @@ export default function BookDetail() {
                 colors={colors}
                 styles={styles}
                 onUpdate={handleCommentUpdate}
+                onReplyAdded={handleReplyAdded}
               />
             ))
           )}

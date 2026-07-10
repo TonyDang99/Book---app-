@@ -3,7 +3,7 @@ import cloudinary from "../lib/cloudinary.js";
 import Book from "../models/Book.js";
 import Comment from "../models/Comment.js";
 import protectRoute from "../middleware/auth.middleware.js";
-import { formatCommentResponse, REACTION_TYPES } from "../lib/commentUtils.js";
+import { buildCommentThreads, formatCommentResponse, REACTION_TYPES } from "../lib/commentUtils.js";
 
 const router = express.Router();
 
@@ -84,10 +84,10 @@ router.get("/:id/comments", protectRoute, async (req, res) => {
     if (!book) return res.status(404).json({ message: "Book not found" });
 
     const comments = await Comment.find({ book: req.params.id })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: 1 })
       .populate("user", "username profileImage");
 
-    res.json(comments.map((comment) => formatCommentResponse(comment, req.user._id)));
+    res.json(buildCommentThreads(comments, req.user._id));
   } catch (error) {
     console.log("Error fetching comments", error);
     res.status(500).json({ message: "Internal server error" });
@@ -117,6 +117,37 @@ router.post("/:id/comments", protectRoute, async (req, res) => {
     res.status(201).json(formatCommentResponse(comment, req.user._id));
   } catch (error) {
     console.log("Error creating comment", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/:id/comments/:commentId/replies", protectRoute, async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text?.trim()) {
+      return res.status(400).json({ message: "Reply cannot be empty" });
+    }
+
+    const parentComment = await Comment.findOne({
+      _id: req.params.commentId,
+      book: req.params.id,
+    });
+    if (!parentComment) return res.status(404).json({ message: "Comment not found" });
+
+    const reply = new Comment({
+      book: req.params.id,
+      user: req.user._id,
+      text: text.trim(),
+      parentComment: parentComment._id,
+    });
+
+    await reply.save();
+    await reply.populate("user", "username profileImage");
+
+    res.status(201).json(formatCommentResponse(reply, req.user._id));
+  } catch (error) {
+    console.log("Error creating reply", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });

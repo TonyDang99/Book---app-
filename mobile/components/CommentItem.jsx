@@ -1,7 +1,15 @@
 import { useRef, useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useAuthStore } from "../store/authStore";
 import { fetchApi } from "../lib/api";
@@ -13,11 +21,23 @@ import {
   REACTION_COLOR,
 } from "../constants/reactions";
 
-export default function CommentItem({ comment, bookId, colors, styles, onUpdate }) {
+export default function CommentItem({
+  comment,
+  bookId,
+  colors,
+  styles,
+  onUpdate,
+  onReplyAdded,
+  isReply = false,
+  depth = 0,
+}) {
   const { token } = useAuthStore();
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
   const [reacting, setReacting] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [submittingReply, setSubmittingReply] = useState(false);
   const longPressOpenedPicker = useRef(false);
 
   const activeReaction = comment.userReaction;
@@ -60,15 +80,48 @@ export default function CommentItem({ comment, bookId, colors, styles, onUpdate 
     setShowPicker(true);
   };
 
+  const handleSubmitReply = async () => {
+    const trimmedReply = replyText.trim();
+    if (!trimmedReply || submittingReply) return;
+
+    try {
+      setSubmittingReply(true);
+      const reply = await fetchApi(`/books/${bookId}/comments/${comment._id}/replies`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: trimmedReply }),
+      });
+
+      onReplyAdded?.(comment._id, reply);
+      setReplyText("");
+      setIsReplying(false);
+    } catch (error) {
+      Alert.alert("Error", error.message || "Failed to post reply");
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  const openReplyComposer = () => {
+    setShowPicker(false);
+    setIsReplying(true);
+  };
+
   return (
-    <View style={styles.commentCard}>
+    <View style={[styles.commentCard, isReply && styles.replyCard]}>
       <Pressable
         onPress={() => comment.user?._id && router.push(`/user/${comment.user._id}`)}
         hitSlop={6}
         accessibilityRole="button"
         accessibilityLabel={`Open ${comment.user?.username || "user"}'s profile`}
       >
-        <Image source={{ uri: comment.user?.profileImage }} style={styles.commentAvatar} />
+        <Image
+          source={{ uri: comment.user?.profileImage }}
+          style={[styles.commentAvatar, isReply && styles.replyAvatar]}
+        />
       </Pressable>
 
       <View style={styles.commentContent}>
@@ -101,40 +154,54 @@ export default function CommentItem({ comment, bookId, colors, styles, onUpdate 
               <Text style={[styles.reactionActionText, { color: actionColor }]}>{actionLabel}</Text>
             </Pressable>
 
-            {showPicker && (
-              <View
-                style={[
-                  styles.reactionPicker,
-                  {
-                    backgroundColor: colors.cardBackground,
-                    borderColor: colors.border,
-                    shadowColor: colors.black,
-                  },
-                ]}
-              >
-                {REACTION_TYPES.map((type) => {
-                  const isActive = activeReaction === type;
-                  return (
-                    <Pressable
-                      key={type}
-                      onPress={() => handleReaction(type)}
-                      disabled={reacting}
-                      style={({ pressed }) => [
-                        styles.reactionPickerItem,
-                        isActive && { backgroundColor: colors.inputBackground },
-                        pressed && { transform: [{ scale: 1.15 }] },
-                      ]}
-                      accessibilityLabel={REACTION_LABEL[type]}
-                      accessibilityRole="button"
-                    >
-                      <Text style={styles.reactionPickerEmoji}>{REACTION_EMOJI[type]}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
           </View>
+
+          <Pressable
+            onPress={openReplyComposer}
+            style={({ pressed }) => [
+              styles.replyActionButton,
+              pressed && styles.reactionActionButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Reply to ${comment.user?.username || "comment"}`}
+          >
+            <Ionicons name="return-down-forward-outline" size={15} color={colors.textSecondary} />
+            <Text style={styles.replyActionText}>Reply</Text>
+          </Pressable>
         </View>
+
+        {showPicker && (
+          <View
+            style={[
+              styles.reactionPicker,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+                shadowColor: colors.black,
+              },
+            ]}
+          >
+            {REACTION_TYPES.map((type) => {
+              const isActive = activeReaction === type;
+              return (
+                <Pressable
+                  key={type}
+                  onPress={() => handleReaction(type)}
+                  disabled={reacting}
+                  style={({ pressed }) => [
+                    styles.reactionPickerItem,
+                    isActive && styles.reactionPickerItemActive,
+                    pressed && styles.reactionPickerItemPressed,
+                  ]}
+                  accessibilityLabel={REACTION_LABEL[type]}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.reactionPickerEmoji}>{REACTION_EMOJI[type]}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
         {comment.totalReactions > 0 && (
           <View style={styles.reactionSummary}>
@@ -159,6 +226,71 @@ export default function CommentItem({ comment, bookId, colors, styles, onUpdate 
             <Text style={[styles.reactionCount, { color: colors.textSecondary }]}>
               {comment.totalReactions}
             </Text>
+          </View>
+        )}
+
+        {isReplying && (
+          <View style={styles.replyComposer}>
+            <TextInput
+              style={styles.replyInput}
+              placeholder={`Reply to ${comment.user?.username || "comment"}...`}
+              placeholderTextColor={colors.placeholderText}
+              value={replyText}
+              onChangeText={setReplyText}
+              autoFocus
+              multiline
+              maxLength={1000}
+            />
+            <Pressable
+              onPress={handleSubmitReply}
+              disabled={!replyText.trim() || submittingReply}
+              style={({ pressed }) => [
+                styles.replySendButton,
+                (!replyText.trim() || submittingReply) && styles.replySendButtonDisabled,
+                pressed && styles.replySendButtonPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Post reply"
+            >
+              {submittingReply ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Ionicons name="send" size={16} color={colors.white} />
+              )}
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setReplyText("");
+                setIsReplying(false);
+              }}
+              style={styles.replyCancelButton}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel reply"
+            >
+              <Ionicons name="close" size={18} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+        )}
+
+        {(comment.replies || []).length > 0 && (
+          <View style={styles.repliesContainer}>
+            {comment.replies.map((reply) => (
+              <View
+                key={reply._id}
+                style={[styles.replyThread, depth > 0 && styles.nestedReplyThread]}
+              >
+                <CommentItem
+                  comment={reply}
+                  bookId={bookId}
+                  colors={colors}
+                  styles={styles}
+                  onUpdate={onUpdate}
+                  onReplyAdded={onReplyAdded}
+                  isReply
+                  depth={depth + 1}
+                />
+              </View>
+            ))}
           </View>
         )}
       </View>
