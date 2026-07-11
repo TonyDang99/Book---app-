@@ -10,6 +10,7 @@ import { PUSH_TOKEN_STORAGE_KEY } from "../constants/notifications";
 import { fetchApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useNotificationStore } from "../store/notificationStore";
+import { useMessageStore } from "../store/messageStore";
 
 if (Platform.OS !== "web") {
   Notifications.setNotificationHandler({
@@ -80,6 +81,8 @@ export default function usePushNotifications() {
   const { token, user } = useAuthStore();
   const fetchUnreadCount = useNotificationStore((state) => state.fetchUnreadCount);
   const setUnreadCount = useNotificationStore((state) => state.setUnreadCount);
+  const fetchUnreadMessages = useMessageStore((state) => state.fetchUnreadCount);
+  const setUnreadMessages = useMessageStore((state) => state.setUnreadCount);
   const processedResponseId = useRef(null);
 
   const syncApplicationBadge = useCallback(async (count) => {
@@ -122,10 +125,12 @@ export default function usePushNotifications() {
   useEffect(() => {
     if (!token || !user) {
       setUnreadCount(0);
+      setUnreadMessages(0);
       return undefined;
     }
 
     fetchUnreadCount(token).then(syncApplicationBadge);
+    fetchUnreadMessages(token);
     registerForPushNotifications(token).catch((error) => {
       console.log("Push notification registration failed", error.message);
     });
@@ -134,6 +139,7 @@ export default function usePushNotifications() {
 
     const receivedSubscription = Notifications.addNotificationReceivedListener(() => {
       fetchUnreadCount(token).then(syncApplicationBadge);
+      fetchUnreadMessages(token);
     });
     const responseSubscription = Notifications.addNotificationResponseReceivedListener(
       handleNotificationResponse
@@ -147,5 +153,14 @@ export default function usePushNotifications() {
       receivedSubscription.remove();
       responseSubscription.remove();
     };
-  }, [fetchUnreadCount, handleNotificationResponse, setUnreadCount, syncApplicationBadge, token, user]);
+  }, [
+    fetchUnreadCount,
+    fetchUnreadMessages,
+    handleNotificationResponse,
+    setUnreadCount,
+    setUnreadMessages,
+    syncApplicationBadge,
+    token,
+    user,
+  ]);
 }

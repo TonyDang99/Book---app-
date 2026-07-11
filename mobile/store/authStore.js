@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fetchApi } from "../lib/api";
 import { PUSH_TOKEN_STORAGE_KEY } from "../constants/notifications";
 import { useNotificationStore } from "./notificationStore";
+import { useMessageStore } from "./messageStore";
 
 export const useAuthStore = create((set, get) => ({
   user: null,
@@ -104,6 +105,7 @@ export const useAuthStore = create((set, get) => ({
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("user");
     useNotificationStore.getState().setUnreadCount(0);
+    useMessageStore.getState().setUnreadCount(0);
     set({ token: null, user: null });
   },
 

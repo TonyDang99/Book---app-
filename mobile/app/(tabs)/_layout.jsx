@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import useTheme from "../../hooks/useTheme";
 import { useAuthStore } from "../../store/authStore";
 import { useNotificationStore } from "../../store/notificationStore";
+import { useMessageStore } from "../../store/messageStore";
 
 const withAlpha = (hex, alpha) => {
   const normalized = hex.replace("#", "");
@@ -30,10 +31,13 @@ export default function TabLayout() {
   const token = useAuthStore((state) => state.token);
   const unreadCount = useNotificationStore((state) => state.unreadCount);
   const fetchUnreadCount = useNotificationStore((state) => state.fetchUnreadCount);
+  const unreadMessages = useMessageStore((state) => state.unreadCount);
+  const fetchUnreadMessages = useMessageStore((state) => state.fetchUnreadCount);
 
   useEffect(() => {
     fetchUnreadCount(token);
-  }, [fetchUnreadCount, token]);
+    fetchUnreadMessages(token);
+  }, [fetchUnreadCount, fetchUnreadMessages, token]);
 
   return (
     <Tabs
@@ -75,10 +79,25 @@ export default function TabLayout() {
         name="notifications"
         options={{
           title: "Notifications",
+          tabBarLabel: "Alerts",
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? "notifications" : "notifications-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: "Messages",
+          tabBarBadge: unreadMessages > 0 ? unreadMessages : undefined,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
               size={size}
               color={color}
             />

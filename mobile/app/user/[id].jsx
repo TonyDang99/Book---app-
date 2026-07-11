@@ -32,6 +32,7 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingFollow, setUpdatingFollow] = useState(false);
+  const [openingMessage, setOpeningMessage] = useState(false);
 
   const userId = Array.isArray(id) ? id[0] : id;
 
@@ -87,6 +88,23 @@ export default function UserProfile() {
       );
     } finally {
       setUpdatingFollow(false);
+    }
+  };
+
+  const handleMessagePress = async () => {
+    if (openingMessage) return;
+
+    try {
+      setOpeningMessage(true);
+      const data = await fetchApi(`/messages/conversations/${userId}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      router.push(`/chat/${data.conversation.id}`);
+    } catch (error) {
+      Alert.alert("Error", error.message || "Failed to open this conversation");
+    } finally {
+      setOpeningMessage(false);
     }
   };
 
@@ -203,39 +221,57 @@ export default function UserProfile() {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={[
-                styles.followButton,
-                profile.isFollowing && styles.followingButton,
-                updatingFollow && styles.followButtonDisabled,
-              ]}
-              onPress={handleFollowToggle}
-              disabled={updatingFollow}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel={profile.isFollowing ? "Unfollow user" : "Follow user"}
-            >
-              {updatingFollow ? (
-                <ActivityIndicator
-                  size="small"
-                  color={profile.isFollowing ? colors.primary : colors.white}
-                />
-              ) : (
-                <Ionicons
-                  name={profile.isFollowing ? "checkmark" : "person-add-outline"}
-                  size={18}
-                  color={profile.isFollowing ? colors.primary : colors.white}
-                />
-              )}
-              <Text
+            <View style={styles.publicProfileActions}>
+              <TouchableOpacity
                 style={[
-                  styles.followButtonText,
-                  profile.isFollowing && styles.followingButtonText,
+                  styles.followButton,
+                  profile.isFollowing && styles.followingButton,
+                  updatingFollow && styles.followButtonDisabled,
                 ]}
+                onPress={handleFollowToggle}
+                disabled={updatingFollow}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={profile.isFollowing ? "Unfollow user" : "Follow user"}
               >
-                {profile.isFollowing ? "Following" : "Follow"}
-              </Text>
-            </TouchableOpacity>
+                {updatingFollow ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={profile.isFollowing ? colors.primary : colors.white}
+                  />
+                ) : (
+                  <Ionicons
+                    name={profile.isFollowing ? "checkmark" : "person-add-outline"}
+                    size={18}
+                    color={profile.isFollowing ? colors.primary : colors.white}
+                  />
+                )}
+                <Text
+                  style={[
+                    styles.followButtonText,
+                    profile.isFollowing && styles.followingButtonText,
+                  ]}
+                >
+                  {profile.isFollowing ? "Following" : "Follow"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.messageButton}
+                onPress={handleMessagePress}
+                disabled={openingMessage}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={`Message ${profile.username}`}
+              >
+                {openingMessage ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.primary} />
+                )}
+                <Text style={styles.messageButtonText}>Message</Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.publicProfileSectionTitle}>Recommendations</Text>
           </View>

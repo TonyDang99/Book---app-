@@ -8,9 +8,11 @@ const sendPushNotifications = async (recipient, notification, unreadCount) => {
   const tokens = (recipient.pushTokens || []).filter(isExpoPushToken);
   if (tokens.length === 0) return;
 
-  const targetRoute = notification.book
-    ? `/book/${notification.book}`
-    : `/user/${notification.actor}`;
+  const targetRoute = notification.conversation
+    ? `/chat/${notification.conversation}`
+    : notification.book
+      ? `/book/${notification.book}`
+      : `/user/${notification.actor}`;
   const messages = tokens.map((to) => ({
     to,
     sound: "default",
@@ -68,6 +70,7 @@ export const createNotification = async ({
   bookId = null,
   commentId = null,
   reactionType = null,
+  conversationId = null,
 }) => {
   if (!recipientId || recipientId.toString() === actorId.toString()) return null;
 
@@ -79,6 +82,7 @@ export const createNotification = async ({
     book: bookId,
     comment: commentId,
     reactionType,
+    conversation: conversationId,
   });
 
   const [recipient, unreadCount] = await Promise.all([

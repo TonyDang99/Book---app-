@@ -18,6 +18,7 @@ const notificationIcons = {
   comment: "chatbubble",
   reply: "return-down-forward",
   reaction: "heart",
+  message: "chatbubble-ellipses",
 };
 
 const formatRelativeTime = (dateString) => {
@@ -101,7 +102,8 @@ export default function NotificationsScreen() {
     }
 
     const actorId = notification.actor?._id;
-    if (notification.book) router.push(`/book/${notification.book}`);
+    if (notification.conversation) router.push(`/chat/${notification.conversation}`);
+    else if (notification.book) router.push(`/book/${notification.book}`);
     else if (actorId) router.push(`/user/${actorId}`);
   };
 
@@ -189,7 +191,7 @@ export default function NotificationsScreen() {
             </View>
             <Text style={styles.emptyTitle}>No notifications yet</Text>
             <Text style={styles.emptyText}>
-              Comments, replies, reactions, and new followers will appear here.
+              Messages, comments, replies, reactions, and new followers will appear here.
             </Text>
           </View>
         }
