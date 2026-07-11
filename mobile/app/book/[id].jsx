@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  findNodeHandle,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Alert,
@@ -13,6 +15,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import createStyles from "../../assets/styles/detail.styles";
 import useTheme from "../../hooks/useTheme";
@@ -25,6 +28,7 @@ import CommentItem from "../../components/CommentItem";
 export default function BookDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { token } = useAuthStore();
   const { colors, isDarkMode } = useTheme();
   const styles = useMemo(() => createStyles(colors, isDarkMode), [colors, isDarkMode]);
@@ -34,6 +38,9 @@ export default function BookDetail() {
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  const scrollViewRef = useRef(null);
+  const focusedReplyInputRef = useRef(null);
 
   const bookId = Array.isArray(id) ? id[0] : id;
 
@@ -64,6 +71,43 @@ export default function BookDetail() {
   useEffect(() => {
     fetchBookDetails();
   }, [fetchBookDetails]);
+
+  const scrollReplyIntoView = useCallback((inputRef) => {
+    focusedReplyInputRef.current = inputRef;
+    setTimeout(() => {
+      const inputNode = findNodeHandle(inputRef?.current);
+      const responder = scrollViewRef.current?.getScrollResponder?.();
+      if (inputNode && responder?.scrollResponderScrollNativeHandleToKeyboard) {
+        responder.scrollResponderScrollNativeHandleToKeyboard(inputNode, 20, true);
+      }
+    }, 180);
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return undefined;
+
+    const moveComposerAboveKeyboard = (event) => {
+      Keyboard.scheduleLayoutAnimation?.(event);
+      setKeyboardInset(Math.max(0, event.endCoordinates?.height || 0));
+      if (focusedReplyInputRef.current) scrollReplyIntoView(focusedReplyInputRef.current);
+    };
+    const resetKeyboardInset = (event) => {
+      Keyboard.scheduleLayoutAnimation?.(event);
+      setKeyboardInset(0);
+      focusedReplyInputRef.current = null;
+    };
+
+    const frameSubscription = Keyboard.addListener(
+      "keyboardWillChangeFrame",
+      moveComposerAboveKeyboard
+    );
+    const hideSubscription = Keyboard.addListener("keyboardWillHide", resetKeyboardInset);
+
+    return () => {
+      frameSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [scrollReplyIntoView]);
 
   const handleCommentUpdate = (updatedComment) => {
     const updateInThread = (thread) =>
@@ -164,7 +208,7 @@ export default function BookDetail() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "android" ? "height" : undefined}
     >
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -173,7 +217,14 @@ export default function BookDetail() {
         <Text style={styles.headerTitle}>Book Details</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+      >
         <Text style={styles.title}>{book.title}</Text>
         <View style={styles.authorRow}>
           {book.user && (
@@ -223,36 +274,53 @@ export default function BookDetail() {
                 styles={styles}
                 onUpdate={handleCommentUpdate}
                 onReplyAdded={handleReplyAdded}
+                onReplyFocus={scrollReplyIntoView}
               />
             ))
           )}
-
-          <View style={styles.commentInputRow}>
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Write a comment..."
-              placeholderTextColor={colors.placeholderText}
-              value={commentText}
-              onChangeText={setCommentText}
-              multiline
-            />
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                (!commentText.trim() || submitting) && styles.sendButtonDisabled,
-              ]}
-              onPress={handleSubmitComment}
-              disabled={!commentText.trim() || submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <Ionicons name="send" size={18} color={colors.white} />
-              )}
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
+
+      <View
+        style={[
+          styles.commentComposerDock,
+          {
+            marginBottom: Platform.OS === "ios" ? keyboardInset : 0,
+            paddingBottom:
+              Platform.OS === "ios" && keyboardInset === 0 ? Math.max(insets.bottom, 10) : 10,
+          },
+        ]}
+      >
+        <TextInput
+          style={styles.commentInput}
+          placeholder="Write a comment..."
+          placeholderTextColor={colors.placeholderText}
+          value={commentText}
+          onChangeText={setCommentText}
+          onFocus={() => {
+            focusedReplyInputRef.current = null;
+            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 120);
+          }}
+          multiline
+          maxLength={1000}
+        />
+        <TouchableOpacity
+          style={[
+            styles.sendButton,
+            (!commentText.trim() || submitting) && styles.sendButtonDisabled,
+          ]}
+          onPress={handleSubmitComment}
+          disabled={!commentText.trim() || submitting}
+          accessibilityRole="button"
+          accessibilityLabel="Post comment"
+        >
+          {submitting ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Ionicons name="send" size={18} color={colors.white} />
+          )}
+        </TouchableOpacity>
+      </View>
     </KeyboardAvoidingView>
   );
 }
