@@ -299,7 +299,6 @@ export default function BookDetail() {
           onChangeText={setCommentText}
           onFocus={() => {
             focusedReplyInputRef.current = null;
-            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 120);
           }}
           multiline
           maxLength={1000}
