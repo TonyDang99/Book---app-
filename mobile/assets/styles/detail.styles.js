@@ -26,7 +26,10 @@ const createStyles = (colors, isDarkMode = false) =>
     },
     scrollContent: {
       padding: 16,
-      paddingBottom: 32,
+      paddingBottom: 24,
+    },
+    scrollView: {
+      flex: 1,
     },
     title: {
       fontSize: 26,
@@ -328,11 +331,15 @@ const createStyles = (colors, isDarkMode = false) =>
       color: colors.textSecondary,
       marginTop: 8,
     },
-    commentInputRow: {
+    commentComposerDock: {
       flexDirection: "row",
       alignItems: "flex-end",
       gap: 10,
-      marginTop: 8,
+      paddingHorizontal: 12,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.cardBackground,
     },
     commentInput: {
       flex: 1,

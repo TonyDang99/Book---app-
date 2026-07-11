@@ -28,6 +28,7 @@ export default function CommentItem({
   styles,
   onUpdate,
   onReplyAdded,
+  onReplyFocus,
   isReply = false,
   depth = 0,
 }) {
@@ -39,6 +40,7 @@ export default function CommentItem({
   const [replyText, setReplyText] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
   const longPressOpenedPicker = useRef(false);
+  const replyInputRef = useRef(null);
 
   const activeReaction = comment.userReaction;
   const actionLabel = activeReaction ? REACTION_LABEL[activeReaction] : "Like";
@@ -260,11 +262,13 @@ export default function CommentItem({
         {isReplying && (
           <View style={styles.replyComposer}>
             <TextInput
+              ref={replyInputRef}
               style={styles.replyInput}
               placeholder={`Reply to ${comment.user?.username || "comment"}...`}
               placeholderTextColor={colors.placeholderText}
               value={replyText}
               onChangeText={setReplyText}
+              onFocus={() => onReplyFocus?.(replyInputRef)}
               autoFocus
               multiline
               maxLength={1000}
@@ -314,6 +318,7 @@ export default function CommentItem({
                   styles={styles}
                   onUpdate={onUpdate}
                   onReplyAdded={onReplyAdded}
+                  onReplyFocus={onReplyFocus}
                   isReply
                   depth={depth + 1}
                 />
