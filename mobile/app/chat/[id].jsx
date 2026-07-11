@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +16,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import createStyles from "../../assets/styles/messages.styles";
 import Loader from "../../components/Loader";
@@ -29,6 +31,7 @@ const formatMessageTime = (dateString) =>
 export default function ChatScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { token, user } = useAuthStore();
   const setUnreadCount = useMessageStore((state) => state.setUnreadCount);
   const { colors, isDarkMode } = useTheme();
@@ -38,6 +41,7 @@ export default function ChatScreen() {
   const [messageText, setMessageText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const listRef = useRef(null);
 
   const conversationId = Array.isArray(id) ? id[0] : id;
@@ -70,6 +74,31 @@ export default function ChatScreen() {
       return () => clearInterval(interval);
     }, [fetchMessages])
   );
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return undefined;
+
+    const moveComposerAboveKeyboard = (event) => {
+      Keyboard.scheduleLayoutAnimation?.(event);
+      setKeyboardInset(Math.max(0, event.endCoordinates?.height || 0));
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+    };
+    const resetKeyboardInset = (event) => {
+      Keyboard.scheduleLayoutAnimation?.(event);
+      setKeyboardInset(0);
+    };
+
+    const frameSubscription = Keyboard.addListener(
+      "keyboardWillChangeFrame",
+      moveComposerAboveKeyboard
+    );
+    const hideSubscription = Keyboard.addListener("keyboardWillHide", resetKeyboardInset);
+
+    return () => {
+      frameSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const handleSend = async () => {
     const text = messageText.trim();
@@ -129,7 +158,7 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "android" ? "height" : undefined}
     >
       <View style={styles.chatHeader}>
         <TouchableOpacity
@@ -162,6 +191,7 @@ export default function ChatScreen() {
         contentContainerStyle={styles.messagesList}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListEmptyComponent={
           <View style={styles.chatEmpty}>
@@ -171,7 +201,16 @@ export default function ChatScreen() {
         }
       />
 
-      <View style={styles.composer}>
+      <View
+        style={[
+          styles.composer,
+          {
+            marginBottom: Platform.OS === "ios" ? keyboardInset : 0,
+            paddingBottom:
+              Platform.OS === "ios" && keyboardInset === 0 ? Math.max(insets.bottom, 10) : 10,
+          },
+        ]}
+      >
         <TextInput
           style={styles.messageInput}
           placeholder="Message..."
@@ -180,6 +219,7 @@ export default function ChatScreen() {
           onChangeText={setMessageText}
           multiline
           maxLength={2000}
+          onFocus={() => setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 120)}
         />
         <Pressable
           style={[styles.sendButton, (!messageText.trim() || sending) && styles.sendButtonDisabled]}
