@@ -171,15 +171,31 @@ export default function UserProfile() {
             <Text style={styles.memberSince}>Joined {formatMemberSince(profile.createdAt)}</Text>
 
             <View style={styles.publicProfileStats}>
-              <View style={styles.publicProfileStat}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.publicProfileStat,
+                  pressed && styles.publicProfileStatPressed,
+                ]}
+                onPress={() => router.push(`/connections/${userId}?type=followers`)}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${profile.followersCount || 0} followers`}
+              >
                 <Text style={styles.publicProfileStatValue}>{profile.followersCount || 0}</Text>
                 <Text style={styles.publicProfileStatLabel}>Followers</Text>
-              </View>
+              </Pressable>
               <View style={styles.publicProfileStatDivider} />
-              <View style={styles.publicProfileStat}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.publicProfileStat,
+                  pressed && styles.publicProfileStatPressed,
+                ]}
+                onPress={() => router.push(`/connections/${userId}?type=following`)}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${profile.followingCount || 0} following`}
+              >
                 <Text style={styles.publicProfileStatValue}>{profile.followingCount || 0}</Text>
                 <Text style={styles.publicProfileStatLabel}>Following</Text>
-              </View>
+              </Pressable>
               <View style={styles.publicProfileStatDivider} />
               <View style={styles.publicProfileStat}>
                 <Text style={styles.publicProfileStatValue}>{books.length}</Text>

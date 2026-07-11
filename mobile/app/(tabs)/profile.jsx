@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
   Alert,
@@ -9,6 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { fetchApi } from "../../lib/api";
 import { useAuthStore } from "../../store/authStore";
 import createStyles from "../../assets/styles/profile.styles";
@@ -28,31 +29,42 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deleteBookId, setDeleteBookId] = useState(null);
+  const [followStats, setFollowStats] = useState({ followersCount: 0, followingCount: 0 });
+  const hasLoadedProfile = useRef(false);
 
-  const { token } = useAuthStore();
+  const { token, user } = useAuthStore();
 
   const router = useRouter();
 
-  const fetchData = async () => {
+  const userId = user?.id || user?._id;
+
+  const fetchData = useCallback(async (showLoader = !hasLoadedProfile.current) => {
     try {
-      setIsLoading(true);
+      if (showLoader) setIsLoading(true);
 
-      const data = await fetchApi("/books/user", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const [booksData, statsData] = await Promise.all([
+        fetchApi("/books/user", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetchApi("/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      setBooks(data);
+      setBooks(booksData);
+      setFollowStats(statsData);
+      hasLoadedProfile.current = true;
     } catch (error) {
       console.error("Error fetching data:", error);
       Alert.alert("Error", "Failed to load profile data. Pull down to refresh.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchData();
-  }, []);
+  }, [fetchData]));
 
   const handleDeleteBook = async (bookId) => {
     try {
@@ -120,7 +132,7 @@ export default function Profile() {
   const handleRefresh = async () => {
     setRefreshing(true);
     await sleep(500);
-    await fetchData();
+    await fetchData(false);
     setRefreshing(false);
   };
 
@@ -128,7 +140,12 @@ export default function Profile() {
 
   return (
     <View style={styles.container}>
-      <ProfileHeader />
+      <ProfileHeader
+        followersCount={followStats.followersCount}
+        followingCount={followStats.followingCount}
+        onFollowersPress={() => router.push(`/connections/${userId}?type=followers`)}
+        onFollowingPress={() => router.push(`/connections/${userId}?type=following`)}
+      />
       <LogoutButton />
 
       {/* YOUR RECOMMENDATIONS */}

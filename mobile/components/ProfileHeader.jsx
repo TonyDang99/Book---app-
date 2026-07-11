@@ -31,7 +31,12 @@ const showSettingsAlert = () => {
   );
 };
 
-export default function ProfileHeader() {
+export default function ProfileHeader({
+  followersCount = 0,
+  followingCount = 0,
+  onFollowersPress,
+  onFollowingPress,
+}) {
   const { user, updateProfileImage } = useAuthStore();
   const { colors, isDarkMode } = useTheme();
   const styles = useMemo(() => createStyles(colors, isDarkMode), [colors, isDarkMode]);
@@ -105,29 +110,53 @@ export default function ProfileHeader() {
 
   return (
     <View style={styles.profileHeader}>
-      <TouchableOpacity
-        style={styles.avatarContainer}
-        onPress={pickAvatar}
-        activeOpacity={0.8}
-        disabled={isUploading}
-      >
-        <Image source={{ uri: avatarUri }} style={styles.profileImage} />
+      <View style={styles.profileIdentityRow}>
+        <TouchableOpacity
+          style={styles.avatarContainer}
+          onPress={pickAvatar}
+          activeOpacity={0.8}
+          disabled={isUploading}
+        >
+          <Image source={{ uri: avatarUri }} style={styles.profileImage} />
 
-        {isUploading ? (
-          <View style={styles.avatarOverlay}>
-            <ActivityIndicator color={colors.white} />
-          </View>
-        ) : (
-          <View style={styles.cameraBadge}>
-            <Ionicons name="camera" size={12} color={colors.white} />
-          </View>
-        )}
-      </TouchableOpacity>
+          {isUploading ? (
+            <View style={styles.avatarOverlay}>
+              <ActivityIndicator color={colors.white} />
+            </View>
+          ) : (
+            <View style={styles.cameraBadge}>
+              <Ionicons name="camera" size={12} color={colors.white} />
+            </View>
+          )}
+        </TouchableOpacity>
 
-      <View style={styles.profileInfo}>
-        <Text style={styles.username}>{user.username}</Text>
-        <Text style={styles.email}>{user.email}</Text>
-        <Text style={styles.memberSince}>🗓️ Joined {formatMemberSince(user.createdAt)}</Text>
+        <View style={styles.profileInfo}>
+          <Text style={styles.username}>{user.username}</Text>
+          <Text style={styles.email}>{user.email}</Text>
+          <Text style={styles.memberSince}>🗓️ Joined {formatMemberSince(user.createdAt)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.profileStats}>
+        <TouchableOpacity
+          style={styles.profileStatButton}
+          onPress={onFollowersPress}
+          accessibilityRole="button"
+          accessibilityLabel={`View ${followersCount} followers`}
+        >
+          <Text style={styles.profileStatValue}>{followersCount}</Text>
+          <Text style={styles.profileStatLabel}>Followers</Text>
+        </TouchableOpacity>
+        <View style={styles.profileStatDivider} />
+        <TouchableOpacity
+          style={styles.profileStatButton}
+          onPress={onFollowingPress}
+          accessibilityRole="button"
+          accessibilityLabel={`View ${followingCount} following`}
+        >
+          <Text style={styles.profileStatValue}>{followingCount}</Text>
+          <Text style={styles.profileStatLabel}>Following</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

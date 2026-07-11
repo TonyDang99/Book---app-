@@ -15,8 +15,7 @@ const createStyles = (colors, isDarkMode = false) =>
       backgroundColor: colors.background,
     },
     profileHeader: {
-      flexDirection: "row",
-      alignItems: "center",
+      alignItems: "stretch",
       backgroundColor: colors.cardBackground,
       borderRadius: 16,
       padding: 16,
@@ -28,6 +27,10 @@ const createStyles = (colors, isDarkMode = false) =>
       elevation: 3,
       borderWidth: 1,
       borderColor: colors.border,
+    },
+    profileIdentityRow: {
+      flexDirection: "row",
+      alignItems: "center",
     },
     avatarContainer: {
       position: "relative",
@@ -75,6 +78,35 @@ const createStyles = (colors, isDarkMode = false) =>
     memberSince: {
       fontSize: 12,
       color: colors.textSecondary,
+    },
+    profileStats: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 16,
+      paddingTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    profileStatButton: {
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: 4,
+      borderRadius: 10,
+    },
+    profileStatValue: {
+      color: colors.textPrimary,
+      fontSize: 17,
+      fontWeight: "700",
+    },
+    profileStatLabel: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    profileStatDivider: {
+      width: 1,
+      height: 30,
+      backgroundColor: colors.border,
     },
     logoutButton: {
       backgroundColor: colors.primary,
@@ -263,6 +295,12 @@ const createStyles = (colors, isDarkMode = false) =>
     publicProfileStat: {
       flex: 1,
       alignItems: "center",
+      justifyContent: "center",
+      alignSelf: "stretch",
+      borderRadius: 10,
+    },
+    publicProfileStatPressed: {
+      backgroundColor: colors.cardBackground,
     },
     publicProfileStatValue: {
       color: colors.textPrimary,
@@ -321,6 +359,81 @@ const createStyles = (colors, isDarkMode = false) =>
     },
     publicProfileLoader: {
       marginTop: 12,
+    },
+    connectionsScreen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    connectionsTitleWrap: {
+      flex: 1,
+      alignItems: "center",
+      paddingHorizontal: 8,
+    },
+    connectionsSubtitle: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      marginTop: 1,
+    },
+    connectionsList: {
+      padding: 16,
+      paddingBottom: 32,
+      flexGrow: 1,
+    },
+    connectionItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      minHeight: 72,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      marginBottom: 10,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.cardBackground,
+    },
+    connectionItemPressed: {
+      opacity: 0.72,
+      transform: [{ scale: 0.99 }],
+    },
+    connectionAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      marginRight: 12,
+      backgroundColor: colors.inputBackground,
+    },
+    connectionInfo: {
+      flex: 1,
+    },
+    connectionUsername: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    connectionHint: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 3,
+    },
+    connectionsEmpty: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 30,
+      paddingVertical: 60,
+    },
+    connectionsEmptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 17,
+      fontWeight: "700",
+      marginTop: 14,
+    },
+    connectionsEmptyText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 19,
+      textAlign: "center",
+      marginTop: 6,
     },
   });
 

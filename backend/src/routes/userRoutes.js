@@ -22,6 +22,54 @@ const getFollowState = async (userId, currentUserId) => {
   };
 };
 
+const getConnections = async (req, res, field) => {
+  try {
+    if (!isValidUserId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+
+    const profileOwner = await User.findById(req.params.id)
+      .select(`username ${field}`)
+      .populate(field, "username profileImage");
+    if (!profileOwner) return res.status(404).json({ message: "User not found" });
+
+    const currentFollowing = new Set(
+      (req.user.following || []).map((followingId) => followingId.toString())
+    );
+    const users = (profileOwner[field] || []).filter(Boolean).map((user) => ({
+      id: user._id,
+      username: user.username,
+      profileImage: user.profileImage,
+      isFollowing: currentFollowing.has(user._id.toString()),
+      isCurrentUser: user._id.toString() === req.user._id.toString(),
+    }));
+
+    res.json({
+      owner: {
+        id: profileOwner._id,
+        username: profileOwner.username,
+      },
+      type: field,
+      total: users.length,
+      users,
+    });
+  } catch (error) {
+    console.error(`Error fetching ${field}`, error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+router.get("/me", protectRoute, async (req, res) => {
+  res.json({
+    followersCount: req.user.followers?.length || 0,
+    followingCount: req.user.following?.length || 0,
+  });
+});
+
+router.get("/:id/followers", protectRoute, (req, res) => getConnections(req, res, "followers"));
+
+router.get("/:id/following", protectRoute, (req, res) => getConnections(req, res, "following"));
+
 router.post("/:id/follow", protectRoute, async (req, res) => {
   try {
     if (!isValidUserId(req.params.id)) {
