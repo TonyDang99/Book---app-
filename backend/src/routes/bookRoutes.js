@@ -4,6 +4,8 @@ import Book from "../models/Book.js";
 import Comment from "../models/Comment.js";
 import protectRoute from "../middleware/auth.middleware.js";
 import { buildCommentThreads, formatCommentResponse, REACTION_TYPES } from "../lib/commentUtils.js";
+import { createNotification } from "../lib/notifications.js";
+import Notification from "../models/Notification.js";
 
 const router = express.Router();
 
@@ -114,6 +116,15 @@ router.post("/:id/comments", protectRoute, async (req, res) => {
     await comment.save();
     await comment.populate("user", "username profileImage");
 
+    await createNotification({
+      recipientId: book.user,
+      actorId: req.user._id,
+      type: "comment",
+      message: `${req.user.username} commented on your recommendation “${book.title}”.`,
+      bookId: book._id,
+      commentId: comment._id,
+    });
+
     res.status(201).json(formatCommentResponse(comment, req.user._id));
   } catch (error) {
     console.log("Error creating comment", error);
@@ -129,11 +140,15 @@ router.post("/:id/comments/:commentId/replies", protectRoute, async (req, res) =
       return res.status(400).json({ message: "Reply cannot be empty" });
     }
 
-    const parentComment = await Comment.findOne({
-      _id: req.params.commentId,
-      book: req.params.id,
-    });
+    const [parentComment, book] = await Promise.all([
+      Comment.findOne({
+        _id: req.params.commentId,
+        book: req.params.id,
+      }),
+      Book.findById(req.params.id).select("title"),
+    ]);
     if (!parentComment) return res.status(404).json({ message: "Comment not found" });
+    if (!book) return res.status(404).json({ message: "Book not found" });
 
     const reply = new Comment({
       book: req.params.id,
@@ -144,6 +159,15 @@ router.post("/:id/comments/:commentId/replies", protectRoute, async (req, res) =
 
     await reply.save();
     await reply.populate("user", "username profileImage");
+
+    await createNotification({
+      recipientId: parentComment.user,
+      actorId: req.user._id,
+      type: "reply",
+      message: `${req.user.username} replied to your comment on “${book.title}”.`,
+      bookId: book._id,
+      commentId: reply._id,
+    });
 
     res.status(201).json(formatCommentResponse(reply, req.user._id));
   } catch (error) {
@@ -174,10 +198,12 @@ router.post("/:id/comments/:commentId/reactions", protectRoute, async (req, res)
     const existingIndex = comment.reactions.findIndex(
       (reaction) => reaction.user.toString() === userId
     );
+    let shouldNotify = true;
 
     if (existingIndex >= 0) {
       if (comment.reactions[existingIndex].type === type) {
         comment.reactions.splice(existingIndex, 1);
+        shouldNotify = false;
       } else {
         comment.reactions[existingIndex].type = type;
       }
@@ -187,6 +213,18 @@ router.post("/:id/comments/:commentId/reactions", protectRoute, async (req, res)
 
     await comment.save();
     await comment.populate("user", "username profileImage");
+
+    if (shouldNotify) {
+      await createNotification({
+        recipientId: comment.user._id,
+        actorId: req.user._id,
+        type: "reaction",
+        message: `${req.user.username} reacted ${type} to your comment on “${book.title}”.`,
+        bookId: book._id,
+        commentId: comment._id,
+        reactionType: type,
+      });
+    }
 
     res.json(formatCommentResponse(comment, req.user._id));
   } catch (error) {
@@ -230,6 +268,7 @@ router.delete("/:id", protectRoute, async (req, res) => {
 
     await book.deleteOne();
     await Comment.deleteMany({ book: req.params.id });
+    await Notification.deleteMany({ book: req.params.id });
 
     res.json({ message: "Book deleted successfully" });
   } catch (error) {

@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    pushTokens: {
+      type: [String],
+      default: [],
+      select: false,
+    },
   },
   { timestamps: true }
 );

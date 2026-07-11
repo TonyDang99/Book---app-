@@ -48,3 +48,22 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Push notifications
+
+The app stores activity notifications in the backend and displays them in the Notifications tab.
+Remote mobile delivery also requires linking this app to an EAS project and building a new native
+binary because `expo-notifications` is a native module.
+
+```bash
+npx eas-cli@latest init
+npx eas-cli@latest build:configure
+npx eas-cli@latest build --profile preview --platform android
+```
+
+Use `--platform ios` for an iOS build. Configure the requested FCM/APNs credentials in the Expo
+project. EAS initialization writes `extra.eas.projectId` to the Expo configuration; the app uses
+that value when obtaining its Expo push token.
+
+Remote push notifications are not available in Expo Go on Android with SDK 53 and newer. Use a
+development, preview, or production build to test remote delivery.

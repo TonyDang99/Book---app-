@@ -12,6 +12,8 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
 import useTheme from "../../hooks/useTheme";
+import { useAuthStore } from "../../store/authStore";
+import { useNotificationStore } from "../../store/notificationStore";
 
 const withAlpha = (hex, alpha) => {
   const normalized = hex.replace("#", "");
@@ -25,6 +27,13 @@ const withAlpha = (hex, alpha) => {
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const token = useAuthStore((state) => state.token);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const fetchUnreadCount = useNotificationStore((state) => state.fetchUnreadCount);
+
+  useEffect(() => {
+    fetchUnreadCount(token);
+  }, [fetchUnreadCount, token]);
 
   return (
     <Tabs
@@ -56,6 +65,20 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? "add-circle" : "add-circle-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Notifications",
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "notifications" : "notifications-outline"}
               size={size}
               color={color}
             />
@@ -243,6 +266,13 @@ function LiquidTabButton({ route, options, isFocused, color, onPress, onLongPres
     >
       <Animated.View style={iconStyle}>
         {options.tabBarIcon?.({ focused: isFocused, color, size: 23 })}
+        {Number(options.tabBarBadge) > 0 && (
+          <View style={styles.tabBadge}>
+            <Animated.Text style={styles.tabBadgeText}>
+              {Number(options.tabBarBadge) > 99 ? "99+" : options.tabBarBadge}
+            </Animated.Text>
+          </View>
+        )}
       </Animated.View>
       <Animated.Text style={[styles.tabBarLabel, { color }, labelStyle]} numberOfLines={1}>
         {label}
@@ -252,6 +282,25 @@ function LiquidTabButton({ route, options, isFocused, color, onPress, onLongPres
 }
 
 const styles = StyleSheet.create({
+  tabBadge: {
+    position: "absolute",
+    top: -7,
+    right: -12,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#e74c3c",
+    borderWidth: 1.5,
+    borderColor: "#ffffff",
+  },
+  tabBadgeText: {
+    color: "#ffffff",
+    fontSize: 9,
+    fontWeight: "800",
+  },
   tabBarDock: {
     position: "absolute",
     left: 16,

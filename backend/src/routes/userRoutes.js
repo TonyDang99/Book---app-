@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import Book from "../models/Book.js";
 import User from "../models/User.js";
 import protectRoute from "../middleware/auth.middleware.js";
+import { createNotification } from "../lib/notifications.js";
 
 const router = express.Router();
 
@@ -80,8 +81,11 @@ router.post("/:id/follow", protectRoute, async (req, res) => {
       return res.status(400).json({ message: "You cannot follow yourself" });
     }
 
-    const targetUser = await User.exists({ _id: req.params.id });
+    const targetUser = await User.findById(req.params.id).select("followers");
     if (!targetUser) return res.status(404).json({ message: "User not found" });
+    const alreadyFollowing = targetUser.followers.some(
+      (followerId) => followerId.toString() === req.user._id.toString()
+    );
 
     await User.bulkWrite([
       {
@@ -97,6 +101,15 @@ router.post("/:id/follow", protectRoute, async (req, res) => {
         },
       },
     ]);
+
+    if (!alreadyFollowing) {
+      await createNotification({
+        recipientId: targetUser._id,
+        actorId: req.user._id,
+        type: "follow",
+        message: `${req.user.username} started following you.`,
+      });
+    }
 
     const followState = await getFollowState(req.params.id, req.user._id);
     res.json(followState);

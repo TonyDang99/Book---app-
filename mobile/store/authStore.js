@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fetchApi } from "../lib/api";
+import { PUSH_TOKEN_STORAGE_KEY } from "../constants/notifications";
+import { useNotificationStore } from "./notificationStore";
 
 export const useAuthStore = create((set, get) => ({
   user: null,
@@ -81,8 +83,27 @@ export const useAuthStore = create((set, get) => ({
   },
 
   logout: async () => {
+    const token = get().token;
+    const pushToken = await AsyncStorage.getItem(PUSH_TOKEN_STORAGE_KEY);
+    if (token && pushToken) {
+      try {
+        await fetchApi("/notifications/push-token", {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pushToken }),
+        });
+        await AsyncStorage.removeItem(PUSH_TOKEN_STORAGE_KEY);
+      } catch (error) {
+        console.log("Failed to unregister push notifications", error.message);
+      }
+    }
+
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("user");
+    useNotificationStore.getState().setUnreadCount(0);
     set({ token: null, user: null });
   },
 

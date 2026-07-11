@@ -7,6 +7,7 @@ import { useFonts } from "expo-font";
 import { useAuthStore } from "../store/authStore";
 import { useThemeStore } from "../store/themeStore";
 import { useEffect } from "react";
+import usePushNotifications from "../hooks/usePushNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,6 +22,8 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     "JetBrainsMono-Medium": require("../assets/fonts/JetBrainsMono-Medium.ttf"),
   });
+
+  usePushNotifications();
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
