@@ -31,6 +31,7 @@ export default function UserProfile() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [updatingFollow, setUpdatingFollow] = useState(false);
 
   const userId = Array.isArray(id) ? id[0] : id;
 
@@ -67,6 +68,27 @@ export default function UserProfile() {
 
     fetchProfile();
   }, [currentUser, fetchProfile, router, userId]);
+
+  const handleFollowToggle = async () => {
+    if (!profile || updatingFollow) return;
+
+    try {
+      setUpdatingFollow(true);
+      const followState = await fetchApi(`/users/${userId}/follow`, {
+        method: profile.isFollowing ? "DELETE" : "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setProfile((currentProfile) => ({ ...currentProfile, ...followState }));
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error.message || `Failed to ${profile.isFollowing ? "unfollow" : "follow"} this user`
+      );
+    } finally {
+      setUpdatingFollow(false);
+    }
+  };
 
   const renderRatingStars = (rating) => (
     <View style={styles.ratingContainer}>
@@ -147,12 +169,58 @@ export default function UserProfile() {
             <Image source={{ uri: profile.profileImage }} style={styles.publicProfileImage} />
             <Text style={styles.publicProfileUsername}>{profile.username}</Text>
             <Text style={styles.memberSince}>Joined {formatMemberSince(profile.createdAt)}</Text>
-            <View style={styles.publicProfileBookCount}>
-              <Ionicons name="book-outline" size={16} color={colors.primary} />
-              <Text style={styles.publicProfileBookCountText}>
-                {books.length} {books.length === 1 ? "recommendation" : "recommendations"}
-              </Text>
+
+            <View style={styles.publicProfileStats}>
+              <View style={styles.publicProfileStat}>
+                <Text style={styles.publicProfileStatValue}>{profile.followersCount || 0}</Text>
+                <Text style={styles.publicProfileStatLabel}>Followers</Text>
+              </View>
+              <View style={styles.publicProfileStatDivider} />
+              <View style={styles.publicProfileStat}>
+                <Text style={styles.publicProfileStatValue}>{profile.followingCount || 0}</Text>
+                <Text style={styles.publicProfileStatLabel}>Following</Text>
+              </View>
+              <View style={styles.publicProfileStatDivider} />
+              <View style={styles.publicProfileStat}>
+                <Text style={styles.publicProfileStatValue}>{books.length}</Text>
+                <Text style={styles.publicProfileStatLabel}>Books</Text>
+              </View>
             </View>
+
+            <TouchableOpacity
+              style={[
+                styles.followButton,
+                profile.isFollowing && styles.followingButton,
+                updatingFollow && styles.followButtonDisabled,
+              ]}
+              onPress={handleFollowToggle}
+              disabled={updatingFollow}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={profile.isFollowing ? "Unfollow user" : "Follow user"}
+            >
+              {updatingFollow ? (
+                <ActivityIndicator
+                  size="small"
+                  color={profile.isFollowing ? colors.primary : colors.white}
+                />
+              ) : (
+                <Ionicons
+                  name={profile.isFollowing ? "checkmark" : "person-add-outline"}
+                  size={18}
+                  color={profile.isFollowing ? colors.primary : colors.white}
+                />
+              )}
+              <Text
+                style={[
+                  styles.followButtonText,
+                  profile.isFollowing && styles.followingButtonText,
+                ]}
+              >
+                {profile.isFollowing ? "Following" : "Follow"}
+              </Text>
+            </TouchableOpacity>
+
             <Text style={styles.publicProfileSectionTitle}>Recommendations</Text>
           </View>
         }

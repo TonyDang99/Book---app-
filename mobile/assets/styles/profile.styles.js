@@ -250,20 +250,62 @@ const createStyles = (colors, isDarkMode = false) =>
       fontWeight: "700",
       marginBottom: 4,
     },
-    publicProfileBookCount: {
+    publicProfileStats: {
+      alignSelf: "stretch",
       flexDirection: "row",
       alignItems: "center",
-      gap: 6,
+      justifyContent: "space-around",
       marginTop: 14,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 20,
+      paddingVertical: 12,
+      borderRadius: 14,
       backgroundColor: colors.inputBackground,
     },
-    publicProfileBookCountText: {
+    publicProfileStat: {
+      flex: 1,
+      alignItems: "center",
+    },
+    publicProfileStatValue: {
       color: colors.textPrimary,
-      fontSize: 13,
-      fontWeight: "600",
+      fontSize: 17,
+      fontWeight: "700",
+    },
+    publicProfileStatLabel: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    publicProfileStatDivider: {
+      width: 1,
+      height: 28,
+      backgroundColor: colors.border,
+    },
+    followButton: {
+      alignSelf: "stretch",
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 14,
+      paddingHorizontal: 18,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+    },
+    followingButton: {
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    followButtonDisabled: {
+      opacity: 0.65,
+    },
+    followButtonText: {
+      color: colors.white,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    followingButtonText: {
+      color: colors.primary,
     },
     publicProfileSectionTitle: {
       alignSelf: "stretch",
