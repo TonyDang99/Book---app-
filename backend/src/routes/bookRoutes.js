@@ -6,6 +6,7 @@ import protectRoute from "../middleware/auth.middleware.js";
 import { buildCommentThreads, formatCommentResponse, REACTION_TYPES } from "../lib/commentUtils.js";
 import { createNotification } from "../lib/notifications.js";
 import Notification from "../models/Notification.js";
+import { notifyMentionedUsers, resolveFollowedMentions } from "../lib/mentionUtils.js";
 
 const router = express.Router();
 
@@ -107,10 +108,12 @@ router.post("/:id/comments", protectRoute, async (req, res) => {
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).json({ message: "Book not found" });
 
+    const mentionedUsers = await resolveFollowedMentions(text.trim(), req.user.following);
     const comment = new Comment({
       book: req.params.id,
       user: req.user._id,
       text: text.trim(),
+      mentions: mentionedUsers.map((user) => user._id),
     });
 
     await comment.save();
@@ -123,6 +126,14 @@ router.post("/:id/comments", protectRoute, async (req, res) => {
       message: `${req.user.username} commented on your recommendation “${book.title}”.`,
       bookId: book._id,
       commentId: comment._id,
+    });
+    await notifyMentionedUsers({
+      mentionedUsers,
+      excludedUserIds: [book.user],
+      actor: req.user,
+      book,
+      commentId: comment._id,
+      createNotification,
     });
 
     res.status(201).json(formatCommentResponse(comment, req.user._id));
@@ -150,11 +161,13 @@ router.post("/:id/comments/:commentId/replies", protectRoute, async (req, res) =
     if (!parentComment) return res.status(404).json({ message: "Comment not found" });
     if (!book) return res.status(404).json({ message: "Book not found" });
 
+    const mentionedUsers = await resolveFollowedMentions(text.trim(), req.user.following);
     const reply = new Comment({
       book: req.params.id,
       user: req.user._id,
       text: text.trim(),
       parentComment: parentComment._id,
+      mentions: mentionedUsers.map((user) => user._id),
     });
 
     await reply.save();
@@ -167,6 +180,14 @@ router.post("/:id/comments/:commentId/replies", protectRoute, async (req, res) =
       message: `${req.user.username} replied to your comment on “${book.title}”.`,
       bookId: book._id,
       commentId: reply._id,
+    });
+    await notifyMentionedUsers({
+      mentionedUsers,
+      excludedUserIds: [parentComment.user],
+      actor: req.user,
+      book,
+      commentId: reply._id,
+      createNotification,
     });
 
     res.status(201).json(formatCommentResponse(reply, req.user._id));

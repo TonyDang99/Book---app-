@@ -24,12 +24,25 @@ import { fetchApi } from "../../lib/api";
 import { formatPublishDate } from "../../lib/utils";
 import Loader from "../../components/Loader";
 import CommentItem from "../../components/CommentItem";
+import MentionSuggestions from "../../components/MentionSuggestions";
+
+const getActiveMention = (text, cursorPosition) => {
+  const textBeforeCursor = text.slice(0, cursorPosition);
+  const match = textBeforeCursor.match(/(?:^|\s)@([^\s@]*)$/);
+  if (!match) return null;
+
+  return {
+    query: match[1],
+    start: textBeforeCursor.lastIndexOf("@"),
+    end: cursorPosition,
+  };
+};
 
 export default function BookDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { token } = useAuthStore();
+  const { token, user } = useAuthStore();
   const { colors, isDarkMode } = useTheme();
   const styles = useMemo(() => createStyles(colors, isDarkMode), [colors, isDarkMode]);
 
@@ -41,35 +54,44 @@ export default function BookDetail() {
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [replyTarget, setReplyTarget] = useState(null);
   const [expandedReplyThreadIds, setExpandedReplyThreadIds] = useState(() => new Set());
+  const [followingUsers, setFollowingUsers] = useState([]);
+  const [commentSelection, setCommentSelection] = useState({ start: 0, end: 0 });
   const scrollViewRef = useRef(null);
   const commentInputRef = useRef(null);
   const activeReplyCommentRef = useRef(null);
 
   const bookId = Array.isArray(id) ? id[0] : id;
+  const currentUserId = user?.id || user?._id;
 
   const fetchBookDetails = useCallback(async () => {
     if (!bookId) return;
 
     try {
       setLoading(true);
-      const [bookData, commentsData] = await Promise.all([
+      const [bookData, commentsData, followingData] = await Promise.all([
         fetchApi(`/books/${bookId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetchApi(`/books/${bookId}/comments`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        currentUserId
+          ? fetchApi(`/users/${currentUserId}/following`, {
+              headers: { Authorization: `Bearer ${token}` },
+            }).catch(() => ({ users: [] }))
+          : Promise.resolve({ users: [] }),
       ]);
 
       setBook(bookData);
       setComments(commentsData);
+      setFollowingUsers(followingData.users || []);
     } catch (error) {
       console.log("Error fetching book details", error);
       Alert.alert("Error", error.message || "Failed to load book details");
     } finally {
       setLoading(false);
     }
-  }, [bookId, token]);
+  }, [bookId, currentUserId, token]);
 
   useEffect(() => {
     fetchBookDetails();
@@ -89,8 +111,10 @@ export default function BookDetail() {
   const handleStartReply = useCallback(
     (comment, commentRef) => {
       const username = comment.user?.username || "user";
+      const mentionText = `@${username} `;
       setReplyTarget({ id: comment._id, username });
-      setCommentText(`@${username} `);
+      setCommentText(mentionText);
+      setCommentSelection({ start: mentionText.length, end: mentionText.length });
       scrollCommentIntoView(commentRef);
       setTimeout(() => commentInputRef.current?.focus(), 60);
     },
@@ -100,6 +124,7 @@ export default function BookDetail() {
   const cancelReply = () => {
     setReplyTarget(null);
     setCommentText("");
+    setCommentSelection({ start: 0, end: 0 });
     activeReplyCommentRef.current = null;
   };
 
@@ -186,6 +211,7 @@ export default function BookDetail() {
         setComments((prev) => [newComment, ...prev]);
       }
       setCommentText("");
+      setCommentSelection({ start: 0, end: 0 });
       setReplyTarget(null);
       activeReplyCommentRef.current = null;
     } catch (error) {
@@ -193,6 +219,30 @@ export default function BookDetail() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const activeMention = getActiveMention(commentText, commentSelection.start);
+  const mentionSuggestions = activeMention
+    ? followingUsers
+        .filter((followingUser) =>
+          followingUser.username.toLowerCase().includes(activeMention.query.toLowerCase())
+        )
+        .slice(0, 5)
+    : [];
+
+  const handleMentionSelect = (mentionedUser) => {
+    if (!activeMention) return;
+
+    const insertion = `@${mentionedUser.username} `;
+    const nextText =
+      commentText.slice(0, activeMention.start) +
+      insertion +
+      commentText.slice(activeMention.end);
+    const nextCursorPosition = activeMention.start + insertion.length;
+
+    setCommentText(nextText);
+    setCommentSelection({ start: nextCursorPosition, end: nextCursorPosition });
+    setTimeout(() => commentInputRef.current?.focus(), 30);
   };
 
   const renderRatingStars = (rating) => {
@@ -321,6 +371,16 @@ export default function BookDetail() {
           },
         ]}
       >
+        {activeMention && (
+          <MentionSuggestions
+            users={mentionSuggestions}
+            query={activeMention.query}
+            onSelect={handleMentionSelect}
+            colors={colors}
+            styles={styles}
+          />
+        )}
+
         {replyTarget && (
           <View style={styles.replyingToRow}>
             <View style={styles.replyingToTextWrap}>
@@ -348,6 +408,8 @@ export default function BookDetail() {
             placeholderTextColor={colors.placeholderText}
             value={commentText}
             onChangeText={setCommentText}
+            selection={commentSelection}
+            onSelectionChange={(event) => setCommentSelection(event.nativeEvent.selection)}
             onFocus={() => {
               if (activeReplyCommentRef.current) {
                 scrollCommentIntoView(activeReplyCommentRef.current);

@@ -19,6 +19,7 @@ const notificationIcons = {
   reply: "return-down-forward",
   reaction: "heart",
   message: "chatbubble-ellipses",
+  mention: "at",
 };
 
 const formatRelativeTime = (dateString) => {
@@ -191,7 +192,7 @@ export default function NotificationsScreen() {
             </View>
             <Text style={styles.emptyTitle}>No notifications yet</Text>
             <Text style={styles.emptyText}>
-              Messages, comments, replies, reactions, and new followers will appear here.
+              Mentions, messages, comments, replies, reactions, and new followers will appear here.
             </Text>
           </View>
         }

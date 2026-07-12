@@ -17,6 +17,17 @@ import {
 const countReplies = (replies = []) =>
   replies.reduce((total, reply) => total + 1 + countReplies(reply.replies || []), 0);
 
+const renderTextWithMentions = (text, styles) =>
+  text.split(/(@[\p{L}\p{N}_.-]+)/gu).map((part, index) =>
+    part.startsWith("@") ? (
+      <Text key={`${part}-${index}`} style={styles.mentionText}>
+        {part}
+      </Text>
+    ) : (
+      part
+    )
+  );
+
 export default function CommentItem({
   comment,
   bookId,
@@ -119,7 +130,7 @@ export default function CommentItem({
         >
           <Text style={styles.commentUsername}>{comment.user?.username}</Text>
 
-          <Text style={styles.commentText}>{comment.text}</Text>
+          <Text style={styles.commentText}>{renderTextWithMentions(comment.text, styles)}</Text>
 
           <Text style={styles.commentDate}>{formatPublishDate(comment.createdAt)}</Text>
         </Pressable>
