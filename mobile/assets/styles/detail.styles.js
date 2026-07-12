@@ -105,6 +105,7 @@ const createStyles = (colors, isDarkMode = false) =>
       marginBottom: 16,
     },
     commentCard: {
+      position: "relative",
       flexDirection: "row",
       backgroundColor: colors.cardBackground,
       borderRadius: 12,
@@ -113,7 +114,13 @@ const createStyles = (colors, isDarkMode = false) =>
       borderWidth: 1,
       borderColor: colors.border,
     },
-    targetCommentCard: {
+    targetCommentBorder: {
+      position: "absolute",
+      top: -1,
+      right: -1,
+      bottom: -1,
+      left: -1,
+      borderRadius: 12,
       borderWidth: 2,
       borderColor: colors.primary,
     },

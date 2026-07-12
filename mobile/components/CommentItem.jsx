@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
+import { Animated, View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -87,6 +87,7 @@ export default function CommentItem({
   const longPressOpenedPicker = useRef(false);
   const commentViewRef = useRef(null);
   const reportedAsTarget = useRef(false);
+  const targetBorderOpacity = useRef(new Animated.Value(0)).current;
 
   const activeReaction = comment.userReaction;
   const replies = comment.replies || [];
@@ -100,11 +101,26 @@ export default function CommentItem({
   useEffect(() => {
     if (isTargeted && !reportedAsTarget.current) {
       reportedAsTarget.current = true;
+      targetBorderOpacity.stopAnimation();
+      targetBorderOpacity.setValue(1);
       onTargetReady?.(commentViewRef);
+      const highlightTimer = setTimeout(() => {
+        Animated.timing(targetBorderOpacity, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+      }, 2000);
+      return () => {
+        clearTimeout(highlightTimer);
+        targetBorderOpacity.stopAnimation();
+      };
     } else if (!isTargeted) {
       reportedAsTarget.current = false;
+      targetBorderOpacity.setValue(0);
     }
-  }, [isTargeted, onTargetReady]);
+    return undefined;
+  }, [isTargeted, onTargetReady, targetBorderOpacity]);
 
   const handleReaction = async (type) => {
     try {
@@ -163,9 +179,12 @@ export default function CommentItem({
       style={[
         styles.commentCard,
         isReply && styles.replyCard,
-        isTargeted && styles.targetCommentCard,
       ]}
     >
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.targetCommentBorder, { opacity: targetBorderOpacity }]}
+      />
       <Pressable
         onPress={() => comment.user?._id && router.push(`/user/${comment.user._id}`)}
         hitSlop={6}
