@@ -129,11 +129,21 @@ export default function BookDetail() {
   const scrollCommentIntoView = useCallback((commentRef) => {
     activeReplyCommentRef.current = commentRef;
     setTimeout(() => {
-      const commentNode = findNodeHandle(commentRef?.current);
       const responder = scrollViewRef.current?.getScrollResponder?.();
-      if (commentNode && responder?.scrollResponderScrollNativeHandleToKeyboard) {
-        responder.scrollResponderScrollNativeHandleToKeyboard(commentNode, 90, true);
-      }
+      const targetView = commentRef?.current;
+      const contentView = responder?.getInnerViewRef?.();
+      if (!targetView || !contentView) return;
+
+      targetView.measureLayout(
+        contentView,
+        (_left, top) => scrollViewRef.current?.scrollTo({ y: Math.max(0, top - 16), animated: true }),
+        () => {
+          const commentNode = findNodeHandle(targetView);
+          if (commentNode && responder?.scrollResponderScrollNativeHandleToKeyboard) {
+            responder.scrollResponderScrollNativeHandleToKeyboard(commentNode, 90, true);
+          }
+        }
+      );
     }, 180);
   }, []);
 
