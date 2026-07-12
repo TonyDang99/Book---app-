@@ -38,6 +38,14 @@ const getActiveMention = (text, cursorPosition) => {
   };
 };
 
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const containsMentionName = (text, username) =>
+  new RegExp(
+    `(^|[^\\p{L}\\p{N}_.-])@?${escapeRegExp(username)}(?=$|[^\\p{L}\\p{N}_.-])`,
+    "iu"
+  ).test(text);
+
 export default function BookDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -55,6 +63,7 @@ export default function BookDetail() {
   const [replyTarget, setReplyTarget] = useState(null);
   const [expandedReplyThreadIds, setExpandedReplyThreadIds] = useState(() => new Set());
   const [followingUsers, setFollowingUsers] = useState([]);
+  const [selectedMentions, setSelectedMentions] = useState([]);
   const [commentSelection, setCommentSelection] = useState({ start: 0, end: 0 });
   const scrollViewRef = useRef(null);
   const commentInputRef = useRef(null);
@@ -111,8 +120,10 @@ export default function BookDetail() {
   const handleStartReply = useCallback(
     (comment, commentRef) => {
       const username = comment.user?.username || "user";
-      const mentionText = `@${username} `;
-      setReplyTarget({ id: comment._id, username });
+      const userId = comment.user?._id || comment.user?.id;
+      const mentionText = `${username} `;
+      setReplyTarget({ id: comment._id, username, userId });
+      setSelectedMentions(userId ? [{ id: userId, username }] : []);
       setCommentText(mentionText);
       setCommentSelection({ start: mentionText.length, end: mentionText.length });
       scrollCommentIntoView(commentRef);
@@ -123,6 +134,7 @@ export default function BookDetail() {
 
   const cancelReply = () => {
     setReplyTarget(null);
+    setSelectedMentions([]);
     setCommentText("");
     setCommentSelection({ start: 0, end: 0 });
     activeReplyCommentRef.current = null;
@@ -188,7 +200,11 @@ export default function BookDetail() {
   const handleSubmitComment = async () => {
     const trimmed = commentText.trim();
     if (!trimmed) return;
-    if (replyTarget && trimmed === `@${replyTarget.username}`) return;
+    if (replyTarget && trimmed === replyTarget.username) return;
+
+    const mentionIds = selectedMentions
+      .filter((mention) => containsMentionName(trimmed, mention.username))
+      .map((mention) => mention.id);
 
     try {
       setSubmitting(true);
@@ -201,7 +217,7 @@ export default function BookDetail() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: trimmed }),
+        body: JSON.stringify({ text: trimmed, mentionIds }),
       });
 
       if (replyTarget) {
@@ -211,6 +227,7 @@ export default function BookDetail() {
         setComments((prev) => [newComment, ...prev]);
       }
       setCommentText("");
+      setSelectedMentions([]);
       setCommentSelection({ start: 0, end: 0 });
       setReplyTarget(null);
       activeReplyCommentRef.current = null;
@@ -233,14 +250,22 @@ export default function BookDetail() {
   const handleMentionSelect = (mentionedUser) => {
     if (!activeMention) return;
 
-    const insertion = `@${mentionedUser.username} `;
+    const insertion = `${mentionedUser.username} `;
     const nextText =
       commentText.slice(0, activeMention.start) +
       insertion +
       commentText.slice(activeMention.end);
     const nextCursorPosition = activeMention.start + insertion.length;
+    const mentionedUserId = mentionedUser.id || mentionedUser._id;
 
     setCommentText(nextText);
+    if (mentionedUserId) {
+      setSelectedMentions((current) =>
+        current.some((mention) => mention.id === mentionedUserId)
+          ? current
+          : [...current, { id: mentionedUserId, username: mentionedUser.username }]
+      );
+    }
     setCommentSelection({ start: nextCursorPosition, end: nextCursorPosition });
     setTimeout(() => commentInputRef.current?.focus(), 30);
   };
@@ -386,7 +411,7 @@ export default function BookDetail() {
             <View style={styles.replyingToTextWrap}>
               <Ionicons name="return-down-forward" size={14} color={colors.primary} />
               <Text style={styles.replyingToText} numberOfLines={1}>
-                Replying to <Text style={styles.replyingToUsername}>@{replyTarget.username}</Text>
+                Replying to <Text style={styles.replyingToUsername}>{replyTarget.username}</Text>
               </Text>
             </View>
             <TouchableOpacity
@@ -404,7 +429,7 @@ export default function BookDetail() {
           <TextInput
             ref={commentInputRef}
             style={styles.commentInput}
-            placeholder={replyTarget ? `Reply to @${replyTarget.username}...` : "Write a comment..."}
+            placeholder={replyTarget ? `Reply to ${replyTarget.username}...` : "Write a comment..."}
             placeholderTextColor={colors.placeholderText}
             value={commentText}
             onChangeText={setCommentText}
@@ -423,14 +448,14 @@ export default function BookDetail() {
               styles.sendButton,
               (!commentText.trim() ||
                 submitting ||
-                (replyTarget && commentText.trim() === `@${replyTarget.username}`)) &&
+                (replyTarget && commentText.trim() === replyTarget.username)) &&
                 styles.sendButtonDisabled,
             ]}
             onPress={handleSubmitComment}
             disabled={
               !commentText.trim() ||
               submitting ||
-              Boolean(replyTarget && commentText.trim() === `@${replyTarget.username}`)
+              Boolean(replyTarget && commentText.trim() === replyTarget.username)
             }
             accessibilityRole="button"
             accessibilityLabel={replyTarget ? "Post reply" : "Post comment"}

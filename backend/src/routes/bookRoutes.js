@@ -88,7 +88,8 @@ router.get("/:id/comments", protectRoute, async (req, res) => {
 
     const comments = await Comment.find({ book: req.params.id })
       .sort({ createdAt: 1 })
-      .populate("user", "username profileImage");
+      .populate("user", "username profileImage")
+      .populate("mentions", "username profileImage");
 
     res.json(buildCommentThreads(comments, req.user._id));
   } catch (error) {
@@ -99,7 +100,7 @@ router.get("/:id/comments", protectRoute, async (req, res) => {
 
 router.post("/:id/comments", protectRoute, async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, mentionIds = [] } = req.body;
 
     if (!text?.trim()) {
       return res.status(400).json({ message: "Comment cannot be empty" });
@@ -108,7 +109,11 @@ router.post("/:id/comments", protectRoute, async (req, res) => {
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).json({ message: "Book not found" });
 
-    const mentionedUsers = await resolveFollowedMentions(text.trim(), req.user.following);
+    const mentionedUsers = await resolveFollowedMentions({
+      text: text.trim(),
+      mentionIds,
+      followingIds: req.user.following,
+    });
     const comment = new Comment({
       book: req.params.id,
       user: req.user._id,
@@ -118,6 +123,7 @@ router.post("/:id/comments", protectRoute, async (req, res) => {
 
     await comment.save();
     await comment.populate("user", "username profileImage");
+    await comment.populate("mentions", "username profileImage");
 
     await createNotification({
       recipientId: book.user,
@@ -145,7 +151,7 @@ router.post("/:id/comments", protectRoute, async (req, res) => {
 
 router.post("/:id/comments/:commentId/replies", protectRoute, async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, mentionIds = [] } = req.body;
 
     if (!text?.trim()) {
       return res.status(400).json({ message: "Reply cannot be empty" });
@@ -161,7 +167,12 @@ router.post("/:id/comments/:commentId/replies", protectRoute, async (req, res) =
     if (!parentComment) return res.status(404).json({ message: "Comment not found" });
     if (!book) return res.status(404).json({ message: "Book not found" });
 
-    const mentionedUsers = await resolveFollowedMentions(text.trim(), req.user.following);
+    const mentionedUsers = await resolveFollowedMentions({
+      text: text.trim(),
+      mentionIds,
+      followingIds: req.user.following,
+      additionalAllowedIds: [parentComment.user],
+    });
     const reply = new Comment({
       book: req.params.id,
       user: req.user._id,
@@ -172,6 +183,7 @@ router.post("/:id/comments/:commentId/replies", protectRoute, async (req, res) =
 
     await reply.save();
     await reply.populate("user", "username profileImage");
+    await reply.populate("mentions", "username profileImage");
 
     await createNotification({
       recipientId: parentComment.user,
@@ -234,6 +246,7 @@ router.post("/:id/comments/:commentId/reactions", protectRoute, async (req, res)
 
     await comment.save();
     await comment.populate("user", "username profileImage");
+    await comment.populate("mentions", "username profileImage");
 
     if (shouldNotify) {
       await createNotification({

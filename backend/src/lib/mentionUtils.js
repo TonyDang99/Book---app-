@@ -1,15 +1,37 @@
 import User from "../models/User.js";
+import mongoose from "mongoose";
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-export const resolveFollowedMentions = async (text, followingIds = []) => {
-  if (!text?.includes("@") || followingIds.length === 0) return [];
+export const resolveFollowedMentions = async ({
+  text,
+  mentionIds = [],
+  followingIds = [],
+  additionalAllowedIds = [],
+}) => {
+  const allowedIds = new Set(
+    [...(followingIds || []), ...(additionalAllowedIds || [])]
+      .filter(Boolean)
+      .map((id) => id.toString())
+  );
+  const explicitIds = (Array.isArray(mentionIds) ? mentionIds : [])
+    .filter((id) => mongoose.isValidObjectId(id) && allowedIds.has(id.toString()))
+    .map((id) => id.toString());
 
-  const followedUsers = await User.find({ _id: { $in: followingIds } }).select(
+  const allowedUsers = await User.find({ _id: { $in: [...allowedIds] } }).select(
     "username profileImage"
   );
+  const explicitIdSet = new Set(explicitIds);
 
-  return followedUsers.filter((user) => {
+  return allowedUsers.filter((user) => {
+    const visibleNamePattern = new RegExp(
+      `(^|[^\\p{L}\\p{N}_.-])@?${escapeRegExp(user.username)}(?=$|[^\\p{L}\\p{N}_.-])`,
+      "iu"
+    );
+    if (explicitIdSet.has(user._id.toString()) && visibleNamePattern.test(text || "")) return true;
+    if (!text?.includes("@")) return false;
+
+    // Keep older @username comments working after structured mentions are introduced.
     const mentionPattern = new RegExp(
       `(^|\\s)@${escapeRegExp(user.username)}(?=\\s|[.,!?;:]|$)`,
       "i"

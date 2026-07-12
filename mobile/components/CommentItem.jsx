@@ -17,16 +17,53 @@ import {
 const countReplies = (replies = []) =>
   replies.reduce((total, reply) => total + 1 + countReplies(reply.replies || []), 0);
 
-const renderTextWithMentions = (text, styles) =>
-  text.split(/(@[\p{L}\p{N}_.-]+)/gu).map((part, index) =>
-    part.startsWith("@") ? (
-      <Text key={`${part}-${index}`} style={styles.mentionText}>
-        {part}
-      </Text>
-    ) : (
-      part
-    )
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const renderTextWithMentions = (text, mentions, styles, onMentionPress) => {
+  const mentionedUsers = (mentions || []).filter(
+    (mentionedUser) => mentionedUser?.username && (mentionedUser?._id || mentionedUser?.id)
   );
+  if (mentionedUsers.length === 0) return text;
+
+  const usersByUsername = new Map(
+    mentionedUsers.map((mentionedUser) => [mentionedUser.username.toLowerCase(), mentionedUser])
+  );
+  const usernames = [...usersByUsername.keys()]
+    .sort((first, second) => second.length - first.length)
+    .map(escapeRegExp)
+    .join("|");
+  const mentionPattern = new RegExp(
+    `(^|[^\\p{L}\\p{N}_.-])(@?(?:${usernames}))(?=$|[^\\p{L}\\p{N}_.-])`,
+    "giu"
+  );
+  const content = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionPattern.exec(text)) !== null) {
+    const prefix = match[1] || "";
+    const mentionStart = match.index + prefix.length;
+    const username = match[2].replace(/^@/, "");
+    const mentionedUser = usersByUsername.get(username.toLowerCase());
+
+    if (mentionStart > lastIndex) content.push(text.slice(lastIndex, mentionStart));
+    content.push(
+      <Text
+        key={`${mentionedUser._id || mentionedUser.id}-${mentionStart}`}
+        style={styles.mentionText}
+        onPress={() => onMentionPress(mentionedUser._id || mentionedUser.id)}
+        accessibilityRole="link"
+        accessibilityLabel={`Open ${mentionedUser.username}'s profile`}
+      >
+        {mentionedUser.username}
+      </Text>
+    );
+    lastIndex = mentionPattern.lastIndex;
+  }
+
+  if (lastIndex < text.length) content.push(text.slice(lastIndex));
+  return content.length > 0 ? content : text;
+};
 
 export default function CommentItem({
   comment,
@@ -123,14 +160,17 @@ export default function CommentItem({
 
       <View style={styles.commentContent}>
         <Pressable
-          onPress={dismissReactionPicker}
-          disabled={!showPicker}
+          onPress={showPicker ? dismissReactionPicker : undefined}
           accessibilityRole={showPicker ? "button" : undefined}
           accessibilityLabel={showPicker ? "Close reaction picker" : undefined}
         >
           <Text style={styles.commentUsername}>{comment.user?.username}</Text>
 
-          <Text style={styles.commentText}>{renderTextWithMentions(comment.text, styles)}</Text>
+          <Text style={styles.commentText}>
+            {renderTextWithMentions(comment.text, comment.mentions, styles, (mentionedUserId) =>
+              router.push(`/user/${mentionedUserId}`)
+            )}
+          </Text>
 
           <Text style={styles.commentDate}>{formatPublishDate(comment.createdAt)}</Text>
         </Pressable>

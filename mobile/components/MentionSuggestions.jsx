@@ -24,7 +24,7 @@ export default function MentionSuggestions({ users, query, onSelect, colors, sty
           >
             <Image source={{ uri: user.profileImage }} style={styles.mentionAvatar} />
             <View style={styles.mentionOptionText}>
-              <Text style={styles.mentionUsername}>@{user.username}</Text>
+              <Text style={styles.mentionUsername}>{user.username}</Text>
               <Text style={styles.mentionFollowingLabel}>Following</Text>
             </View>
           </Pressable>
