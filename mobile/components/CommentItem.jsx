@@ -1,12 +1,5 @@
 import { useRef, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -30,8 +23,8 @@ export default function CommentItem({
   colors,
   styles,
   onUpdate,
-  onReplyAdded,
-  onReplyFocus,
+  onStartReply,
+  expandedReplyThreadIds,
   isReply = false,
   depth = 0,
   expandReplies = false,
@@ -40,17 +33,15 @@ export default function CommentItem({
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
   const [reacting, setReacting] = useState(false);
-  const [isReplying, setIsReplying] = useState(false);
-  const [replyText, setReplyText] = useState("");
-  const [submittingReply, setSubmittingReply] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
   const longPressOpenedPicker = useRef(false);
-  const replyInputRef = useRef(null);
+  const commentViewRef = useRef(null);
 
   const activeReaction = comment.userReaction;
   const replies = comment.replies || [];
   const replyCount = countReplies(replies);
-  const repliesVisible = expandReplies || showReplies;
+  const repliesVisible =
+    expandReplies || showReplies || expandedReplyThreadIds?.has(comment._id);
   const actionLabel = activeReaction ? REACTION_LABEL[activeReaction] : "Like";
   const actionColor = activeReaction ? REACTION_COLOR[activeReaction] : colors.textSecondary;
 
@@ -100,39 +91,13 @@ export default function CommentItem({
     setShowPicker(false);
   };
 
-  const handleSubmitReply = async () => {
-    const trimmedReply = replyText.trim();
-    if (!trimmedReply || submittingReply) return;
-
-    try {
-      setSubmittingReply(true);
-      const reply = await fetchApi(`/books/${bookId}/comments/${comment._id}/replies`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ text: trimmedReply }),
-      });
-
-      onReplyAdded?.(comment._id, reply);
-      setReplyText("");
-      setIsReplying(false);
-      setShowReplies(true);
-    } catch (error) {
-      Alert.alert("Error", error.message || "Failed to post reply");
-    } finally {
-      setSubmittingReply(false);
-    }
-  };
-
   const openReplyComposer = () => {
     dismissReactionPicker();
-    setIsReplying(true);
+    onStartReply?.(comment, commentViewRef);
   };
 
   return (
-    <View style={[styles.commentCard, isReply && styles.replyCard]}>
+    <View ref={commentViewRef} style={[styles.commentCard, isReply && styles.replyCard]}>
       <Pressable
         onPress={() => comment.user?._id && router.push(`/user/${comment.user._id}`)}
         hitSlop={6}
@@ -268,51 +233,6 @@ export default function CommentItem({
           </View>
         )}
 
-        {isReplying && (
-          <View style={styles.replyComposer}>
-            <TextInput
-              ref={replyInputRef}
-              style={styles.replyInput}
-              placeholder={`Reply to ${comment.user?.username || "comment"}...`}
-              placeholderTextColor={colors.placeholderText}
-              value={replyText}
-              onChangeText={setReplyText}
-              onFocus={() => onReplyFocus?.(replyInputRef)}
-              autoFocus
-              multiline
-              maxLength={1000}
-            />
-            <Pressable
-              onPress={handleSubmitReply}
-              disabled={!replyText.trim() || submittingReply}
-              style={({ pressed }) => [
-                styles.replySendButton,
-                (!replyText.trim() || submittingReply) && styles.replySendButtonDisabled,
-                pressed && styles.replySendButtonPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Post reply"
-            >
-              {submittingReply ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <Ionicons name="send" size={16} color={colors.white} />
-              )}
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                setReplyText("");
-                setIsReplying(false);
-              }}
-              style={styles.replyCancelButton}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel reply"
-            >
-              <Ionicons name="close" size={18} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-        )}
-
         {replyCount > 0 && !expandReplies && (
           <Pressable
             onPress={() => setShowReplies((visible) => !visible)}
@@ -355,8 +275,8 @@ export default function CommentItem({
                   colors={colors}
                   styles={styles}
                   onUpdate={onUpdate}
-                  onReplyAdded={onReplyAdded}
-                  onReplyFocus={onReplyFocus}
+                  onStartReply={onStartReply}
+                  expandedReplyThreadIds={expandedReplyThreadIds}
                   isReply
                   depth={depth + 1}
                   expandReplies={repliesVisible}

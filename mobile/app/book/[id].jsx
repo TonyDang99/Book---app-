@@ -39,8 +39,11 @@ export default function BookDetail() {
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
+  const [replyTarget, setReplyTarget] = useState(null);
+  const [expandedReplyThreadIds, setExpandedReplyThreadIds] = useState(() => new Set());
   const scrollViewRef = useRef(null);
-  const focusedReplyInputRef = useRef(null);
+  const commentInputRef = useRef(null);
+  const activeReplyCommentRef = useRef(null);
 
   const bookId = Array.isArray(id) ? id[0] : id;
 
@@ -72,16 +75,33 @@ export default function BookDetail() {
     fetchBookDetails();
   }, [fetchBookDetails]);
 
-  const scrollReplyIntoView = useCallback((inputRef) => {
-    focusedReplyInputRef.current = inputRef;
+  const scrollCommentIntoView = useCallback((commentRef) => {
+    activeReplyCommentRef.current = commentRef;
     setTimeout(() => {
-      const inputNode = findNodeHandle(inputRef?.current);
+      const commentNode = findNodeHandle(commentRef?.current);
       const responder = scrollViewRef.current?.getScrollResponder?.();
-      if (inputNode && responder?.scrollResponderScrollNativeHandleToKeyboard) {
-        responder.scrollResponderScrollNativeHandleToKeyboard(inputNode, 20, true);
+      if (commentNode && responder?.scrollResponderScrollNativeHandleToKeyboard) {
+        responder.scrollResponderScrollNativeHandleToKeyboard(commentNode, 90, true);
       }
     }, 180);
   }, []);
+
+  const handleStartReply = useCallback(
+    (comment, commentRef) => {
+      const username = comment.user?.username || "user";
+      setReplyTarget({ id: comment._id, username });
+      setCommentText(`@${username} `);
+      scrollCommentIntoView(commentRef);
+      setTimeout(() => commentInputRef.current?.focus(), 60);
+    },
+    [scrollCommentIntoView]
+  );
+
+  const cancelReply = () => {
+    setReplyTarget(null);
+    setCommentText("");
+    activeReplyCommentRef.current = null;
+  };
 
   useEffect(() => {
     if (Platform.OS !== "ios") return undefined;
@@ -89,12 +109,11 @@ export default function BookDetail() {
     const moveComposerAboveKeyboard = (event) => {
       Keyboard.scheduleLayoutAnimation?.(event);
       setKeyboardInset(Math.max(0, event.endCoordinates?.height || 0));
-      if (focusedReplyInputRef.current) scrollReplyIntoView(focusedReplyInputRef.current);
+      if (activeReplyCommentRef.current) scrollCommentIntoView(activeReplyCommentRef.current);
     };
     const resetKeyboardInset = (event) => {
       Keyboard.scheduleLayoutAnimation?.(event);
       setKeyboardInset(0);
-      focusedReplyInputRef.current = null;
     };
 
     const frameSubscription = Keyboard.addListener(
@@ -107,7 +126,7 @@ export default function BookDetail() {
       frameSubscription.remove();
       hideSubscription.remove();
     };
-  }, [scrollReplyIntoView]);
+  }, [scrollCommentIntoView]);
 
   const handleCommentUpdate = (updatedComment) => {
     const updateInThread = (thread) =>
@@ -144,10 +163,14 @@ export default function BookDetail() {
   const handleSubmitComment = async () => {
     const trimmed = commentText.trim();
     if (!trimmed) return;
+    if (replyTarget && trimmed === `@${replyTarget.username}`) return;
 
     try {
       setSubmitting(true);
-      const newComment = await fetchApi(`/books/${bookId}/comments`, {
+      const endpoint = replyTarget
+        ? `/books/${bookId}/comments/${replyTarget.id}/replies`
+        : `/books/${bookId}/comments`;
+      const newComment = await fetchApi(endpoint, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -156,8 +179,15 @@ export default function BookDetail() {
         body: JSON.stringify({ text: trimmed }),
       });
 
-      setComments((prev) => [newComment, ...prev]);
+      if (replyTarget) {
+        handleReplyAdded(replyTarget.id, newComment);
+        setExpandedReplyThreadIds((current) => new Set(current).add(replyTarget.id));
+      } else {
+        setComments((prev) => [newComment, ...prev]);
+      }
       setCommentText("");
+      setReplyTarget(null);
+      activeReplyCommentRef.current = null;
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to post comment");
     } finally {
@@ -273,8 +303,8 @@ export default function BookDetail() {
                 colors={colors}
                 styles={styles}
                 onUpdate={handleCommentUpdate}
-                onReplyAdded={handleReplyAdded}
-                onReplyFocus={scrollReplyIntoView}
+                onStartReply={handleStartReply}
+                expandedReplyThreadIds={expandedReplyThreadIds}
               />
             ))
           )}
@@ -291,34 +321,65 @@ export default function BookDetail() {
           },
         ]}
       >
-        <TextInput
-          style={styles.commentInput}
-          placeholder="Write a comment..."
-          placeholderTextColor={colors.placeholderText}
-          value={commentText}
-          onChangeText={setCommentText}
-          onFocus={() => {
-            focusedReplyInputRef.current = null;
-          }}
-          multiline
-          maxLength={1000}
-        />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            (!commentText.trim() || submitting) && styles.sendButtonDisabled,
-          ]}
-          onPress={handleSubmitComment}
-          disabled={!commentText.trim() || submitting}
-          accessibilityRole="button"
-          accessibilityLabel="Post comment"
-        >
-          {submitting ? (
-            <ActivityIndicator size="small" color={colors.white} />
-          ) : (
-            <Ionicons name="send" size={18} color={colors.white} />
-          )}
-        </TouchableOpacity>
+        {replyTarget && (
+          <View style={styles.replyingToRow}>
+            <View style={styles.replyingToTextWrap}>
+              <Ionicons name="return-down-forward" size={14} color={colors.primary} />
+              <Text style={styles.replyingToText} numberOfLines={1}>
+                Replying to <Text style={styles.replyingToUsername}>@{replyTarget.username}</Text>
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.cancelReplyButton}
+              onPress={cancelReply}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel reply"
+            >
+              <Ionicons name="close" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={styles.commentComposerRow}>
+          <TextInput
+            ref={commentInputRef}
+            style={styles.commentInput}
+            placeholder={replyTarget ? `Reply to @${replyTarget.username}...` : "Write a comment..."}
+            placeholderTextColor={colors.placeholderText}
+            value={commentText}
+            onChangeText={setCommentText}
+            onFocus={() => {
+              if (activeReplyCommentRef.current) {
+                scrollCommentIntoView(activeReplyCommentRef.current);
+              }
+            }}
+            multiline
+            maxLength={1000}
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              (!commentText.trim() ||
+                submitting ||
+                (replyTarget && commentText.trim() === `@${replyTarget.username}`)) &&
+                styles.sendButtonDisabled,
+            ]}
+            onPress={handleSubmitComment}
+            disabled={
+              !commentText.trim() ||
+              submitting ||
+              Boolean(replyTarget && commentText.trim() === `@${replyTarget.username}`)
+            }
+            accessibilityRole="button"
+            accessibilityLabel={replyTarget ? "Post reply" : "Post comment"}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Ionicons name="send" size={18} color={colors.white} />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
