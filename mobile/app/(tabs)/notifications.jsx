@@ -103,8 +103,15 @@ export default function NotificationsScreen() {
     }
 
     const actorId = notification.actor?._id;
+    const bookId = notification.book?._id || notification.book;
+    const commentId = notification.comment?._id || notification.comment;
     if (notification.conversation) router.push(`/chat/${notification.conversation}`);
-    else if (notification.book) router.push(`/book/${notification.book}`);
+    else if (bookId) {
+      router.push({
+        pathname: "/book/[id]",
+        params: { id: bookId, ...(commentId ? { commentId } : {}) },
+      });
+    }
     else if (actorId) router.push(`/user/${actorId}`);
   };
 

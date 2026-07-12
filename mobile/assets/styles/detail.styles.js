@@ -113,6 +113,10 @@ const createStyles = (colors, isDarkMode = false) =>
       borderWidth: 1,
       borderColor: colors.border,
     },
+    targetCommentCard: {
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
     commentAvatar: {
       width: 36,
       height: 36,

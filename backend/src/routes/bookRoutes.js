@@ -4,7 +4,7 @@ import Book from "../models/Book.js";
 import Comment from "../models/Comment.js";
 import protectRoute from "../middleware/auth.middleware.js";
 import { buildCommentThreads, formatCommentResponse, REACTION_TYPES } from "../lib/commentUtils.js";
-import { createNotification } from "../lib/notifications.js";
+import { createNotification, formatNotificationPreview } from "../lib/notifications.js";
 import Notification from "../models/Notification.js";
 import { notifyMentionedUsers, resolveFollowedMentions } from "../lib/mentionUtils.js";
 
@@ -129,7 +129,9 @@ router.post("/:id/comments", protectRoute, async (req, res) => {
       recipientId: book.user,
       actorId: req.user._id,
       type: "comment",
-      message: `${req.user.username} commented on your recommendation “${book.title}”.`,
+      message: `${req.user.username} commented on “${book.title}”: “${formatNotificationPreview(
+        comment.text
+      )}”`,
       bookId: book._id,
       commentId: comment._id,
     });
@@ -189,7 +191,9 @@ router.post("/:id/comments/:commentId/replies", protectRoute, async (req, res) =
       recipientId: parentComment.user,
       actorId: req.user._id,
       type: "reply",
-      message: `${req.user.username} replied to your comment on “${book.title}”.`,
+      message: `${req.user.username} replied to your comment: “${formatNotificationPreview(
+        reply.text
+      )}”`,
       bookId: book._id,
       commentId: reply._id,
     });

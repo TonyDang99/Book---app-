@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -76,6 +76,8 @@ export default function CommentItem({
   isReply = false,
   depth = 0,
   expandReplies = false,
+  targetCommentId,
+  onTargetReady,
 }) {
   const { token } = useAuthStore();
   const router = useRouter();
@@ -84,6 +86,7 @@ export default function CommentItem({
   const [showReplies, setShowReplies] = useState(false);
   const longPressOpenedPicker = useRef(false);
   const commentViewRef = useRef(null);
+  const reportedAsTarget = useRef(false);
 
   const activeReaction = comment.userReaction;
   const replies = comment.replies || [];
@@ -92,6 +95,16 @@ export default function CommentItem({
     expandReplies || showReplies || expandedReplyThreadIds?.has(comment._id);
   const actionLabel = activeReaction ? REACTION_LABEL[activeReaction] : "Like";
   const actionColor = activeReaction ? REACTION_COLOR[activeReaction] : colors.textSecondary;
+  const isTargeted = targetCommentId === comment._id;
+
+  useEffect(() => {
+    if (isTargeted && !reportedAsTarget.current) {
+      reportedAsTarget.current = true;
+      onTargetReady?.(commentViewRef);
+    } else if (!isTargeted) {
+      reportedAsTarget.current = false;
+    }
+  }, [isTargeted, onTargetReady]);
 
   const handleReaction = async (type) => {
     try {
@@ -145,7 +158,14 @@ export default function CommentItem({
   };
 
   return (
-    <View ref={commentViewRef} style={[styles.commentCard, isReply && styles.replyCard]}>
+    <View
+      ref={commentViewRef}
+      style={[
+        styles.commentCard,
+        isReply && styles.replyCard,
+        isTargeted && styles.targetCommentCard,
+      ]}
+    >
       <Pressable
         onPress={() => comment.user?._id && router.push(`/user/${comment.user._id}`)}
         hitSlop={6}
@@ -331,6 +351,8 @@ export default function CommentItem({
                   isReply
                   depth={depth + 1}
                   expandReplies={repliesVisible}
+                  targetCommentId={targetCommentId}
+                  onTargetReady={onTargetReady}
                 />
               </View>
             ))}

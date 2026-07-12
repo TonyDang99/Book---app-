@@ -4,15 +4,25 @@ import User from "../models/User.js";
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const isExpoPushToken = (token) => /^(Expo|Exponent)PushToken\[[^\]]+\]$/.test(token);
 
+export const formatNotificationPreview = (text, maxLength = 180) => {
+  const normalizedText = text?.trim().replace(/\s+/g, " ") || "";
+  if (normalizedText.length <= maxLength) return normalizedText;
+  return `${normalizedText.slice(0, maxLength - 1).trimEnd()}…`;
+};
+
 const sendPushNotifications = async (recipient, notification, unreadCount) => {
   const tokens = (recipient.pushTokens || []).filter(isExpoPushToken);
   if (tokens.length === 0) return;
 
-  const targetRoute = notification.conversation
-    ? `/chat/${notification.conversation}`
-    : notification.book
-      ? `/book/${notification.book}`
-      : `/user/${notification.actor}`;
+  let targetRoute = notification.actor ? `/user/${notification.actor}` : "/(tabs)/notifications";
+  if (notification.conversation) {
+    targetRoute = `/chat/${notification.conversation}`;
+  } else if (notification.book) {
+    const commentQuery = notification.comment
+      ? `?commentId=${encodeURIComponent(notification.comment.toString())}`
+      : "";
+    targetRoute = `/book/${notification.book}${commentQuery}`;
+  }
   const messages = tokens.map((to) => ({
     to,
     sound: "default",

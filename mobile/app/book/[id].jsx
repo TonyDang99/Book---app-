@@ -47,7 +47,7 @@ const containsMentionName = (text, username) =>
   ).test(text);
 
 export default function BookDetail() {
-  const { id } = useLocalSearchParams();
+  const { id, commentId } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { token, user } = useAuthStore();
@@ -70,7 +70,19 @@ export default function BookDetail() {
   const activeReplyCommentRef = useRef(null);
 
   const bookId = Array.isArray(id) ? id[0] : id;
+  const targetCommentId = Array.isArray(commentId) ? commentId[0] : commentId;
   const currentUserId = user?.id || user?._id;
+
+  const findCommentPath = useCallback((thread, targetId, ancestors = []) => {
+    for (const comment of thread) {
+      const currentPath = [...ancestors, comment._id];
+      if (comment._id === targetId) return currentPath;
+
+      const replyPath = findCommentPath(comment.replies || [], targetId, currentPath);
+      if (replyPath) return replyPath;
+    }
+    return null;
+  }, []);
 
   const fetchBookDetails = useCallback(async () => {
     if (!bookId) return;
@@ -93,6 +105,14 @@ export default function BookDetail() {
 
       setBook(bookData);
       setComments(commentsData);
+      if (targetCommentId) {
+        const targetPath = findCommentPath(commentsData, targetCommentId);
+        if (targetPath) {
+          setExpandedReplyThreadIds(
+            (current) => new Set([...current, ...targetPath.slice(0, -1)])
+          );
+        }
+      }
       setFollowingUsers(followingData.users || []);
     } catch (error) {
       console.log("Error fetching book details", error);
@@ -100,7 +120,7 @@ export default function BookDetail() {
     } finally {
       setLoading(false);
     }
-  }, [bookId, currentUserId, token]);
+  }, [bookId, currentUserId, findCommentPath, targetCommentId, token]);
 
   useEffect(() => {
     fetchBookDetails();
@@ -115,6 +135,26 @@ export default function BookDetail() {
         responder.scrollResponderScrollNativeHandleToKeyboard(commentNode, 90, true);
       }
     }, 180);
+  }, []);
+
+  const handleTargetCommentReady = useCallback((commentRef) => {
+    setTimeout(() => {
+      const responder = scrollViewRef.current?.getScrollResponder?.();
+      const targetView = commentRef?.current;
+      const contentView = responder?.getInnerViewRef?.();
+      if (!targetView || !contentView) return;
+
+      targetView.measureLayout(
+        contentView,
+        (_left, top) => scrollViewRef.current?.scrollTo({ y: Math.max(0, top - 16), animated: true }),
+        () => {
+          const commentNode = findNodeHandle(targetView);
+          if (commentNode && responder?.scrollResponderScrollNativeHandleToKeyboard) {
+            responder.scrollResponderScrollNativeHandleToKeyboard(commentNode, 120, true);
+          }
+        }
+      );
+    }, 250);
   }, []);
 
   const handleStartReply = useCallback(
@@ -380,6 +420,8 @@ export default function BookDetail() {
                 onUpdate={handleCommentUpdate}
                 onStartReply={handleStartReply}
                 expandedReplyThreadIds={expandedReplyThreadIds}
+                targetCommentId={targetCommentId}
+                onTargetReady={handleTargetCommentReady}
               />
             ))
           )}
