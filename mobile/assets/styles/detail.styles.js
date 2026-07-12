@@ -293,6 +293,30 @@ const createStyles = (colors, isDarkMode = false) =>
       alignItems: "center",
       justifyContent: "center",
     },
+    viewRepliesButton: {
+      alignSelf: "flex-start",
+      minHeight: 34,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      marginTop: 9,
+      paddingHorizontal: 6,
+      paddingVertical: 5,
+      borderRadius: 8,
+    },
+    viewRepliesButtonPressed: {
+      backgroundColor: colors.inputBackground,
+    },
+    viewRepliesLine: {
+      width: 22,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    viewRepliesText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
     repliesContainer: {
       marginTop: 10,
     },

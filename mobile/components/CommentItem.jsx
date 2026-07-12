@@ -21,6 +21,9 @@ import {
   REACTION_COLOR,
 } from "../constants/reactions";
 
+const countReplies = (replies = []) =>
+  replies.reduce((total, reply) => total + 1 + countReplies(reply.replies || []), 0);
+
 export default function CommentItem({
   comment,
   bookId,
@@ -31,6 +34,7 @@ export default function CommentItem({
   onReplyFocus,
   isReply = false,
   depth = 0,
+  expandReplies = false,
 }) {
   const { token } = useAuthStore();
   const router = useRouter();
@@ -39,10 +43,14 @@ export default function CommentItem({
   const [isReplying, setIsReplying] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [showReplies, setShowReplies] = useState(false);
   const longPressOpenedPicker = useRef(false);
   const replyInputRef = useRef(null);
 
   const activeReaction = comment.userReaction;
+  const replies = comment.replies || [];
+  const replyCount = countReplies(replies);
+  const repliesVisible = expandReplies || showReplies;
   const actionLabel = activeReaction ? REACTION_LABEL[activeReaction] : "Like";
   const actionColor = activeReaction ? REACTION_COLOR[activeReaction] : colors.textSecondary;
 
@@ -110,6 +118,7 @@ export default function CommentItem({
       onReplyAdded?.(comment._id, reply);
       setReplyText("");
       setIsReplying(false);
+      setShowReplies(true);
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to post reply");
     } finally {
@@ -304,9 +313,38 @@ export default function CommentItem({
           </View>
         )}
 
-        {(comment.replies || []).length > 0 && (
+        {replyCount > 0 && !expandReplies && (
+          <Pressable
+            onPress={() => setShowReplies((visible) => !visible)}
+            style={({ pressed }) => [
+              styles.viewRepliesButton,
+              pressed && styles.viewRepliesButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: repliesVisible }}
+            accessibilityLabel={
+              repliesVisible
+                ? "Hide replies"
+                : `View ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`
+            }
+          >
+            <View style={styles.viewRepliesLine} />
+            <Ionicons
+              name={repliesVisible ? "chevron-up" : "chevron-down"}
+              size={15}
+              color={colors.textSecondary}
+            />
+            <Text style={styles.viewRepliesText}>
+              {repliesVisible
+                ? "Hide replies"
+                : `View ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
+            </Text>
+          </Pressable>
+        )}
+
+        {repliesVisible && replies.length > 0 && (
           <View style={styles.repliesContainer}>
-            {comment.replies.map((reply) => (
+            {replies.map((reply) => (
               <View
                 key={reply._id}
                 style={[styles.replyThread, depth > 0 && styles.nestedReplyThread]}
@@ -321,6 +359,7 @@ export default function CommentItem({
                   onReplyFocus={onReplyFocus}
                   isReply
                   depth={depth + 1}
+                  expandReplies={repliesVisible}
                 />
               </View>
             ))}
