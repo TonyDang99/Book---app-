@@ -7,6 +7,7 @@ import { useFonts } from "expo-font";
 import { useAuthStore } from "../store/authStore";
 import { useThemeStore } from "../store/themeStore";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import usePushNotifications from "../hooks/usePushNotifications";
 
 SplashScreen.preventAutoHideAsync();
@@ -51,18 +52,20 @@ export default function RootLayout() {
   if (!fontsLoaded || isCheckingAuth) return null;
 
   return (
-    <SafeAreaProvider>
-      <SafeScreen>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="book" />
-          <Stack.Screen name="user" />
-          <Stack.Screen name="connections" />
-          <Stack.Screen name="chat" />
-        </Stack>
-      </SafeScreen>
-      <StatusBar style={mode === "dark" ? "light" : "dark"} />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <SafeScreen>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="book" />
+            <Stack.Screen name="user" />
+            <Stack.Screen name="connections" />
+            <Stack.Screen name="chat" />
+          </Stack>
+        </SafeScreen>
+        <StatusBar style={mode === "dark" ? "light" : "dark"} />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

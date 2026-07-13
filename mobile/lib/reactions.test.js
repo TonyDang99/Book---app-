@@ -1,4 +1,8 @@
-import { buildOptimisticReaction } from "./reactions";
+import {
+  buildOptimisticReaction,
+  getReactionFromPoint,
+  getReactionGestureState,
+} from "./reactions";
 
 const emptyCounts = {
   like: 0,
@@ -73,5 +77,50 @@ describe("buildOptimisticReaction", () => {
     );
 
     expect(updated.topReactions).toEqual(["like", "love", "wow"]);
+  });
+});
+
+describe("getReactionFromPoint", () => {
+  const geometry = { left: 20, top: 100, width: 280, height: 58 };
+
+  it.each([
+    ["like", 40],
+    ["love", 80],
+    ["care", 120],
+    ["haha", 160],
+    ["wow", 200],
+    ["sad", 240],
+    ["angry", 280],
+  ])("maps the %s hit zone while sliding", (reaction, pageX) => {
+    expect(getReactionFromPoint(pageX, 125, geometry)).toBe(reaction);
+  });
+
+  it("allows the enlarged icon area above the picker", () => {
+    expect(getReactionFromPoint(200, 70, geometry)).toBe("wow");
+  });
+
+  it("returns null in the release-to-cancel zone", () => {
+    expect(getReactionFromPoint(200, 210, geometry)).toBeNull();
+    expect(getReactionFromPoint(10, 125, geometry)).toBeNull();
+  });
+
+  it("does not select when a hold is released on the trigger without sliding", () => {
+    expect(getReactionGestureState(160, 174, geometry)).toEqual({
+      enteredPicker: false,
+      reaction: null,
+    });
+  });
+
+  it("keeps the enlarged icon selectable only after entering the picker", () => {
+    const entered = getReactionGestureState(200, 125, geometry);
+    expect(entered).toEqual({ enteredPicker: true, reaction: "wow" });
+    expect(getReactionGestureState(200, 50, geometry, entered.enteredPicker)).toEqual({
+      enteredPicker: true,
+      reaction: "wow",
+    });
+    expect(getReactionGestureState(200, 174, geometry, entered.enteredPicker)).toEqual({
+      enteredPicker: true,
+      reaction: null,
+    });
   });
 });

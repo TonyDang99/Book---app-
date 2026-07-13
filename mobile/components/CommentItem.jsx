@@ -1,16 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, View, Text, Pressable, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
 
-import ReactionPicker from "./ReactionPicker";
+import { useReactionPicker } from "./ReactionPicker";
 import { useAuthStore } from "../store/authStore";
 import { fetchApi } from "../lib/api";
 import { buildOptimisticReaction } from "../lib/reactions";
 import { formatPublishDate } from "../lib/utils";
 import {
+  REACTION_TYPES,
   REACTION_EMOJI,
   REACTION_LABEL,
   REACTION_COLOR,
@@ -83,11 +86,10 @@ export default function CommentItem({
 }) {
   const { token } = useAuthStore();
   const router = useRouter();
-  const [showPicker, setShowPicker] = useState(false);
   const [reacting, setReacting] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
-  const longPressOpenedPicker = useRef(false);
   const reactionRequestInFlight = useRef(false);
+  const selectReactionRef = useRef(null);
   const reactionButtonRef = useRef(null);
   const commentViewRef = useRef(null);
   const reportedAsTarget = useRef(false);
@@ -97,6 +99,13 @@ export default function CommentItem({
   const previousReactionSummary = useRef(
     `${comment.totalReactions || 0}:${(comment.topReactions || []).join(",")}`
   );
+  const {
+    activeCommentId,
+    openReactionPicker,
+    updateReactionGesture,
+    finishReactionGesture,
+    cancelReactionGesture,
+  } = useReactionPicker();
 
   const activeReaction = comment.userReaction;
   const replies = comment.replies || [];
@@ -106,6 +115,7 @@ export default function CommentItem({
   const actionLabel = activeReaction ? REACTION_LABEL[activeReaction] : "Like";
   const actionColor = activeReaction ? REACTION_COLOR[activeReaction] : colors.textSecondary;
   const isTargeted = targetCommentId === comment._id;
+  const showPicker = activeCommentId === comment._id;
 
   useEffect(() => {
     if (isTargeted && !reportedAsTarget.current) {
@@ -146,7 +156,7 @@ export default function CommentItem({
     }).start();
   }, [comment.topReactions, comment.totalReactions, reactionSummaryScale]);
 
-  const animateReactionAction = () => {
+  const animateReactionAction = useCallback(() => {
     reactionActionScale.stopAnimation();
     reactionActionScale.setValue(0.82);
     Animated.spring(reactionActionScale, {
@@ -155,9 +165,9 @@ export default function CommentItem({
       bounciness: 13,
       useNativeDriver: true,
     }).start();
-  };
+  }, [reactionActionScale]);
 
-  const handleReaction = async (type) => {
+  const handleReaction = useCallback(async (type) => {
     if (reactionRequestInFlight.current) return;
 
     const previousComment = comment;
@@ -166,7 +176,6 @@ export default function CommentItem({
     try {
       reactionRequestInFlight.current = true;
       setReacting(true);
-      setShowPicker(false);
       onUpdate(optimisticComment);
       animateReactionAction();
 
@@ -188,42 +197,73 @@ export default function CommentItem({
       reactionRequestInFlight.current = false;
       setReacting(false);
     }
-  };
+  }, [animateReactionAction, bookId, comment, onUpdate, token]);
 
-  const handleQuickReaction = () => {
-    if (longPressOpenedPicker.current) {
-      longPressOpenedPicker.current = false;
-      return;
-    }
+  selectReactionRef.current = handleReaction;
 
-    if (showPicker) {
-      dismissReactionPicker();
-      return;
-    }
-
+  const handleQuickReaction = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
     handleReaction(activeReaction || "like");
-  };
+  }, [activeReaction, handleReaction]);
 
-  const handleOpenPicker = () => {
-    if (reacting) return;
-    longPressOpenedPicker.current = true;
-    setShowPicker(true);
-  };
+  const handleOpenPicker = useCallback(() => {
+    if (reactionRequestInFlight.current) return;
+    openReactionPicker({
+      commentId: comment._id,
+      anchorRef: reactionButtonRef,
+      activeReaction,
+      disabled: reacting,
+      onSelect: (type) => selectReactionRef.current?.(type),
+    });
+  }, [activeReaction, comment._id, openReactionPicker, reacting]);
 
-  const handleReactionPressOut = () => {
-    if (!longPressOpenedPicker.current) return;
-    setTimeout(() => {
-      longPressOpenedPicker.current = false;
-    }, 100);
-  };
+  const reactionGesture = useMemo(() => {
+    const holdAndSlide = Gesture.Pan()
+      .activateAfterLongPress(250)
+      .maxPointers(1)
+      .shouldCancelWhenOutside(false)
+      .onStart(() => {
+        runOnJS(handleOpenPicker)();
+      })
+      .onUpdate((event) => {
+        runOnJS(updateReactionGesture)(event.absoluteX, event.absoluteY);
+      })
+      .onEnd((event) => {
+        runOnJS(finishReactionGesture)(event.absoluteX, event.absoluteY);
+      })
+      .onFinalize((_event, success) => {
+        if (!success) runOnJS(cancelReactionGesture)();
+      });
 
-  const dismissReactionPicker = () => {
-    setShowPicker(false);
-  };
+    const quickTap = Gesture.Tap().maxDuration(300).onEnd((_event, success) => {
+      if (success) runOnJS(handleQuickReaction)();
+    });
+
+    return Gesture.Exclusive(holdAndSlide, quickTap);
+  }, [
+    cancelReactionGesture,
+    finishReactionGesture,
+    handleOpenPicker,
+    handleQuickReaction,
+    updateReactionGesture,
+  ]);
+
+  const handleAccessibilityAction = useCallback(
+    (event) => {
+      const actionName = event.nativeEvent.actionName;
+      if (actionName === "activate") {
+        handleQuickReaction();
+        return;
+      }
+
+      const reaction = actionName.replace(/^reaction-/, "");
+      if (REACTION_TYPES.includes(reaction)) handleReaction(reaction);
+    },
+    [handleQuickReaction, handleReaction]
+  );
 
   const openReplyComposer = () => {
-    dismissReactionPicker();
+    cancelReactionGesture();
     onStartReply?.(comment, commentViewRef);
   };
 
@@ -253,7 +293,7 @@ export default function CommentItem({
 
       <View style={styles.commentContent}>
         <Pressable
-          onPress={showPicker ? dismissReactionPicker : undefined}
+          onPress={showPicker ? cancelReactionGesture : undefined}
           accessibilityRole={showPicker ? "button" : undefined}
           accessibilityLabel={showPicker ? "Close reaction picker" : undefined}
         >
@@ -269,36 +309,44 @@ export default function CommentItem({
         </Pressable>
 
         <View style={styles.commentActionsRow}>
-          <Animated.View
-            style={[
-              styles.reactionActionWrap,
-              { transform: [{ scale: reactionActionScale }] },
-            ]}
-          >
-            <Pressable
-              ref={reactionButtonRef}
-              collapsable={false}
-              onPress={handleQuickReaction}
-              onLongPress={handleOpenPicker}
-              onPressOut={handleReactionPressOut}
-              delayLongPress={250}
-              disabled={reacting}
-              style={({ pressed }) => [
-                styles.reactionActionButton,
-                reacting && styles.reactionActionButtonBusy,
-                pressed && styles.reactionActionButtonPressed,
+          <GestureDetector gesture={reactionGesture}>
+            <Animated.View
+              style={[
+                styles.reactionActionWrap,
+                { transform: [{ scale: reactionActionScale }] },
               ]}
-              accessibilityLabel="React to comment"
-              accessibilityHint="Tap to like, or long press to choose a reaction"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: reacting, busy: reacting }}
             >
-              {activeReaction ? (
-                <Text style={styles.reactionActionEmoji}>{REACTION_EMOJI[activeReaction]}</Text>
-              ) : null}
-              <Text style={[styles.reactionActionText, { color: actionColor }]}>{actionLabel}</Text>
-            </Pressable>
-          </Animated.View>
+              <View
+                ref={reactionButtonRef}
+                collapsable={false}
+                hitSlop={8}
+                style={[
+                  styles.reactionActionButton,
+                  showPicker && styles.reactionActionButtonPressed,
+                  reacting && styles.reactionActionButtonBusy,
+                ]}
+                accessible
+                accessibilityLabel="React to comment"
+                accessibilityHint="Tap to like, or hold and slide to choose a reaction"
+                accessibilityRole="button"
+                accessibilityState={{ disabled: reacting, busy: reacting, expanded: showPicker }}
+                accessibilityActions={[
+                  { name: "activate", label: activeReaction ? "Remove reaction" : "Like" },
+                  ...REACTION_TYPES.map((type) => ({
+                    name: `reaction-${type}`,
+                    label: REACTION_LABEL[type],
+                  })),
+                ]}
+                onAccessibilityAction={handleAccessibilityAction}
+                onAccessibilityTap={handleQuickReaction}
+              >
+                {activeReaction ? (
+                  <Text style={styles.reactionActionEmoji}>{REACTION_EMOJI[activeReaction]}</Text>
+                ) : null}
+                <Text style={[styles.reactionActionText, { color: actionColor }]}>{actionLabel}</Text>
+              </View>
+            </Animated.View>
+          </GestureDetector>
 
           <Pressable
             onPress={openReplyComposer}
@@ -313,16 +361,6 @@ export default function CommentItem({
             <Text style={styles.replyActionText}>Reply</Text>
           </Pressable>
         </View>
-
-        <ReactionPicker
-          visible={showPicker}
-          anchorRef={reactionButtonRef}
-          activeReaction={activeReaction}
-          colors={colors}
-          disabled={reacting}
-          onSelect={handleReaction}
-          onDismiss={dismissReactionPicker}
-        />
 
         {comment.totalReactions > 0 && (
           <Animated.View

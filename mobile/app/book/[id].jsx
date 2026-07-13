@@ -24,6 +24,7 @@ import { fetchApi } from "../../lib/api";
 import { formatPublishDate } from "../../lib/utils";
 import Loader from "../../components/Loader";
 import CommentItem from "../../components/CommentItem";
+import { ReactionPickerProvider } from "../../components/ReactionPicker";
 import MentionSuggestions from "../../components/MentionSuggestions";
 
 const getActiveMention = (text, cursorPosition) => {
@@ -361,10 +362,11 @@ export default function BookDetail() {
   const commentCount = countComments(comments);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "android" ? "height" : undefined}
-    >
+    <ReactionPickerProvider colors={colors}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "android" ? "height" : undefined}
+      >
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
@@ -520,6 +522,7 @@ export default function BookDetail() {
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ReactionPickerProvider>
   );
 }

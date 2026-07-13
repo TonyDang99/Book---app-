@@ -152,6 +152,9 @@ const createStyles = (colors, isDarkMode = false) =>
     },
     reactionActionWrap: {
       position: "relative",
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: "center",
     },
     reactionActionButton: {
       minHeight: 30,

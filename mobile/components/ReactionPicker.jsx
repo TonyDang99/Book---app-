@@ -1,139 +1,342 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Easing,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
 import { REACTION_EMOJI, REACTION_LABEL, REACTION_TYPES } from "../constants/reactions";
+import { getReactionGestureState } from "../lib/reactions";
 
 const EDGE_PADDING = 12;
-const PICKER_HEIGHT = 58;
+const PICKER_HEIGHT = 52;
 const PICKER_GAP = 9;
+const EXPANDED_ICON_OVERFLOW = 80;
+const EXIT_DURATION = 70;
+
+const ReactionPickerContext = createContext(null);
 
 const playHaptic = (style) => {
   Haptics.impactAsync(style).catch(() => undefined);
 };
 
+const ReactionGlyph = ({ type, idleProgress }) => {
+  if (type === "like") {
+    return (
+      <View style={[styles.socialGlyph, styles.likeGlyph]}>
+        <Animated.View
+          style={{
+            transform: [
+              {
+                rotate: idleProgress.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: ["-5deg", "7deg", "-5deg"],
+                }),
+              },
+              {
+                scale: idleProgress.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.9, 1.08, 0.9],
+                }),
+              },
+            ],
+          }}
+        >
+          <Ionicons name="thumbs-up" size={25} color="#FFFFFF" />
+        </Animated.View>
+      </View>
+    );
+  }
+
+  if (type === "love") {
+    return (
+      <View style={[styles.socialGlyph, styles.loveGlyph]}>
+        <Animated.View
+          style={{
+            transform: [
+              {
+                scale: idleProgress.interpolate({
+                  inputRange: [0, 0.42, 0.7, 1],
+                  outputRange: [0.62, 1.08, 0.78, 0.62],
+                }),
+              },
+            ],
+          }}
+        >
+          <Ionicons name="heart" size={26} color="#FFFFFF" />
+        </Animated.View>
+      </View>
+    );
+  }
+
+  if (type === "care") {
+    return (
+      <View style={styles.careGlyph}>
+        <Text style={styles.careFace}>🤗</Text>
+        <Text style={styles.careHeart}>❤️</Text>
+      </View>
+    );
+  }
+
+  return <Text style={styles.optionEmoji}>{REACTION_EMOJI[type]}</Text>;
+};
+
 function ReactionOption({
   type,
+  index,
   entranceProgress,
+  highlighted,
+  highlightedIndex,
+  hasHighlight,
   activeReaction,
   disabled,
   colors,
+  baseWidth,
+  pickerVisible,
+  onHover,
   onSelect,
 }) {
-  const [highlighted, setHighlighted] = useState(false);
-  const pressProgress = useRef(new Animated.Value(0)).current;
+  const hoverProgress = useRef(new Animated.Value(0)).current;
+  const restingProgress = useRef(new Animated.Value(0)).current;
+  const reflowX = useRef(new Animated.Value(0)).current;
+  const idleProgress = useRef(new Animated.Value(0)).current;
+  const distanceFromHighlight = highlightedIndex < 0 ? 0 : index - highlightedIndex;
+  const reflowMagnitude =
+    { 1: 12, 2: 8, 3: 4 }[Math.abs(distanceFromHighlight)] ||
+    (distanceFromHighlight ? 2 : 0);
+  const reflowOffset = Math.sign(distanceFromHighlight) * reflowMagnitude;
 
-  const setPressed = (pressed) => {
-    setHighlighted(pressed);
-    Animated.spring(pressProgress, {
-      toValue: pressed ? 1 : 0,
-      speed: 30,
-      bounciness: 7,
+  useEffect(() => {
+    hoverProgress.stopAnimation();
+    Animated.timing(hoverProgress, {
+      toValue: highlighted ? 1 : 0,
+      duration: highlighted ? 190 : 170,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  };
+  }, [highlighted, hoverProgress]);
+
+  useEffect(() => {
+    restingProgress.stopAnimation();
+    Animated.timing(restingProgress, {
+      toValue: hasHighlight && !highlighted ? 1 : 0,
+      duration: 170,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [hasHighlight, highlighted, restingProgress]);
+
+  useEffect(() => {
+    reflowX.stopAnimation();
+    Animated.timing(reflowX, {
+      toValue: reflowOffset,
+      duration: 170,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [reflowOffset, reflowX]);
+
+  useEffect(() => {
+    idleProgress.stopAnimation();
+    idleProgress.setValue(0);
+    if (!pickerVisible || hasHighlight) return undefined;
+
+    const idleAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.delay(index * 45),
+        Animated.timing(idleProgress, {
+          toValue: 1,
+          duration: 430,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(idleProgress, {
+          toValue: 0,
+          duration: 430,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    idleAnimation.start();
+
+    return () => idleAnimation.stop();
+  }, [hasHighlight, idleProgress, index, pickerVisible]);
 
   const handleSelect = () => {
-    playHaptic(Haptics.ImpactFeedbackStyle.Light);
+    playHaptic(Haptics.ImpactFeedbackStyle.Medium);
     onSelect(type);
   };
 
   const isActive = activeReaction === type;
-
+  const idleRotation =
+    {
+      like: "-2deg",
+      love: "0deg",
+      care: "4deg",
+      haha: "-4deg",
+      wow: "1deg",
+      sad: "-2deg",
+      angry: "-5deg",
+    }[type] || "-2deg";
+  const idleLift = { care: -2.5, haha: -3.5, wow: -2, sad: -1.5, angry: -1 }[type] || -1.5;
+  const idlePeakScale = { care: 1.06, haha: 1.1, wow: 1.11, sad: 1.04, angry: 1.06 }[type] || 1.035;
   return (
     <Animated.View
       style={[
         styles.optionEntrance,
+        highlighted && styles.optionHighlighted,
         {
           opacity: entranceProgress,
           transform: [
             {
               translateY: entranceProgress.interpolate({
                 inputRange: [0, 1],
-                outputRange: [16, 0],
+                outputRange: [24, 0],
               }),
             },
+            { translateX: reflowX },
             {
               scale: entranceProgress.interpolate({
-                inputRange: [0, 0.7, 1],
-                outputRange: [0.35, 1.12, 1],
+                inputRange: [0, 1],
+                outputRange: [0.68, 1],
               }),
             },
           ],
         },
       ]}
     >
-      {highlighted && (
-        <View
+      <Animated.View
+        style={[
+          styles.optionWidth,
+          { width: baseWidth },
+        ]}
+      >
+        <Animated.View
           pointerEvents="none"
           style={[
             styles.tooltip,
-            { backgroundColor: colors.textPrimary, shadowColor: colors.black },
+            {
+              backgroundColor: "rgba(30, 30, 30, 0.9)",
+              shadowColor: colors.black,
+              opacity: hoverProgress,
+              transform: [
+                {
+                  translateY: hoverProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [6, 0],
+                  }),
+                },
+                {
+                  scale: hoverProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+            },
           ]}
         >
-          <Text style={[styles.tooltipText, { color: colors.background }]}>
-            {REACTION_LABEL[type]}
-          </Text>
-        </View>
-      )}
+          <Text style={styles.tooltipText}>{REACTION_LABEL[type]}</Text>
+        </Animated.View>
 
-      <Animated.View
-        style={{
-          transform: [
-            {
-              translateY: pressProgress.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, -10],
-              }),
-            },
-            {
-              scale: pressProgress.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 1.38],
-              }),
-            },
-          ],
-        }}
-      >
-        <Pressable
-          disabled={disabled}
-          onPress={handleSelect}
-          onPressIn={() => setPressed(true)}
-          onPressOut={() => setPressed(false)}
-          onHoverIn={() => setPressed(true)}
-          onHoverOut={() => setPressed(false)}
-          style={[
-            styles.optionButton,
-            isActive && { backgroundColor: colors.inputBackground },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={REACTION_LABEL[type]}
-          accessibilityState={{ selected: isActive, disabled }}
+        <Animated.View
+          style={{
+            transform: [
+              {
+                translateY: hoverProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -28],
+                }),
+              },
+              {
+                scale: hoverProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 2.2],
+                }),
+              },
+            ],
+          }}
         >
-          <Text style={styles.optionEmoji}>{REACTION_EMOJI[type]}</Text>
-        </Pressable>
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  scale: restingProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 0.85],
+                  }),
+                },
+                {
+                  translateY: idleProgress.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0, idleLift, 0],
+                  }),
+                },
+                {
+                  rotate: idleProgress.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: ["0deg", idleRotation, "0deg"],
+                  }),
+                },
+                {
+                  scale: idleProgress.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [1, idlePeakScale, 1],
+                  }),
+                },
+              ],
+            }}
+          >
+            <Pressable
+              disabled={disabled}
+              onPress={handleSelect}
+              onPressIn={() => onHover(type)}
+              onPressOut={() => onHover(null)}
+              onHoverIn={() => onHover(type)}
+              onHoverOut={() => onHover(null)}
+              style={[
+                styles.optionButton,
+                isActive && { backgroundColor: colors.inputBackground },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={REACTION_LABEL[type]}
+              accessibilityState={{ selected: isActive, disabled }}
+            >
+              <ReactionGlyph type={type} idleProgress={idleProgress} />
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
       </Animated.View>
     </Animated.View>
   );
 }
 
-export default function ReactionPicker({
+function ReactionPicker({
   visible,
+  rootRef,
   anchorRef,
   activeReaction,
+  hoveredReaction,
   colors,
   disabled = false,
+  onGeometryChange,
+  onHover,
   onSelect,
-  onDismiss,
 }) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [rendered, setRendered] = useState(false);
@@ -142,57 +345,50 @@ export default function ReactionPicker({
   const renderedRef = useRef(false);
   const animationFrameRef = useRef(null);
   const containerOpacity = useRef(new Animated.Value(0)).current;
-  const containerScale = useRef(new Animated.Value(0.82)).current;
-  const containerTranslateY = useRef(new Animated.Value(8)).current;
-  const optionProgress = useRef(REACTION_TYPES.map(() => new Animated.Value(0))).current;
+  const containerScale = useRef(new Animated.Value(0.92)).current;
+  const containerTranslateY = useRef(new Animated.Value(6)).current;
+  const optionProgress = useRef(new Animated.Value(0)).current;
 
   visibleRef.current = visible;
 
   useEffect(() => {
-    const pickerWidth = Math.min(windowWidth - EDGE_PADDING * 2, 318);
+    const pickerWidth = Math.min(windowWidth - EDGE_PADDING * 2, 328);
 
     const startEntranceAnimation = () => {
       containerOpacity.stopAnimation();
       containerScale.stopAnimation();
       containerTranslateY.stopAnimation();
-      optionProgress.forEach((progress) => {
-        progress.stopAnimation();
-        progress.setValue(0);
-      });
+      optionProgress.stopAnimation();
       containerOpacity.setValue(0);
-      containerScale.setValue(0.82);
-      containerTranslateY.setValue(8);
+      containerScale.setValue(0.92);
+      containerTranslateY.setValue(6);
+      optionProgress.setValue(0);
 
       Animated.parallel([
         Animated.timing(containerOpacity, {
           toValue: 1,
-          duration: 130,
-          easing: Easing.out(Easing.quad),
+          duration: 70,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.spring(containerScale, {
+        Animated.timing(containerScale, {
           toValue: 1,
-          speed: 22,
-          bounciness: 8,
+          duration: 80,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.spring(containerTranslateY, {
+        Animated.timing(containerTranslateY, {
           toValue: 0,
-          speed: 24,
-          bounciness: 6,
+          duration: 80,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.stagger(
-          28,
-          optionProgress.map((progress) =>
-            Animated.spring(progress, {
-              toValue: 1,
-              speed: 23,
-              bounciness: 10,
-              useNativeDriver: true,
-            })
-          )
-        ),
+        Animated.timing(optionProgress, {
+          toValue: 1,
+          duration: 82,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
       ]).start();
     };
 
@@ -200,55 +396,57 @@ export default function ReactionPicker({
       renderedRef.current = true;
       setRendered(true);
       setPosition(null);
-      Haptics.selectionAsync().catch(() => undefined);
       animationFrameRef.current = requestAnimationFrame(() => {
         const anchor = anchorRef?.current;
-        if (!anchor?.measureInWindow) {
-          setPosition({
-            left: (windowWidth - pickerWidth) / 2,
-            top: Math.max(EDGE_PADDING, (windowHeight - PICKER_HEIGHT) / 2),
-            width: pickerWidth,
+        const root = rootRef?.current;
+        if (!anchor?.measureInWindow || !root?.measureInWindow) return;
+
+        root.measureInWindow((rootX, rootY) => {
+          anchor.measureInWindow((x, y, width, height) => {
+            if (!visibleRef.current) return;
+
+            const preferredTop = y - PICKER_HEIGHT - PICKER_GAP;
+            const top =
+              preferredTop >= EDGE_PADDING + EXPANDED_ICON_OVERFLOW
+                ? preferredTop
+                : Math.min(
+                    windowHeight - PICKER_HEIGHT - EDGE_PADDING,
+                    y + height + PICKER_GAP
+                  );
+            const centeredLeft = x + width / 2 - pickerWidth / 2;
+            const left = Math.min(
+              windowWidth - pickerWidth - EDGE_PADDING,
+              Math.max(EDGE_PADDING, centeredLeft)
+            );
+            const geometry = { left, top, width: pickerWidth, height: PICKER_HEIGHT };
+
+            setPosition({ left: left - rootX, top: top - rootY, width: pickerWidth });
+            onGeometryChange(geometry);
+            startEntranceAnimation();
           });
-          startEntranceAnimation();
-          return;
-        }
-
-        anchor.measureInWindow((x, y, width, height) => {
-          const preferredTop = y - PICKER_HEIGHT - PICKER_GAP;
-          const top =
-            preferredTop >= EDGE_PADDING
-              ? preferredTop
-              : Math.min(windowHeight - PICKER_HEIGHT - EDGE_PADDING, y + height + PICKER_GAP);
-          const centeredLeft = x + width / 2 - pickerWidth / 2;
-          const left = Math.min(
-            windowWidth - pickerWidth - EDGE_PADDING,
-            Math.max(EDGE_PADDING, centeredLeft)
-          );
-
-          setPosition({ left, top, width: pickerWidth });
-          startEntranceAnimation();
         });
       });
     } else if (renderedRef.current) {
       containerOpacity.stopAnimation();
       containerScale.stopAnimation();
       containerTranslateY.stopAnimation();
+      optionProgress.stopAnimation();
       Animated.parallel([
         Animated.timing(containerOpacity, {
           toValue: 0,
-          duration: 110,
+          duration: EXIT_DURATION,
           easing: Easing.in(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(containerScale, {
-          toValue: 0.9,
-          duration: 110,
+          toValue: 0.4,
+          duration: EXIT_DURATION,
           easing: Easing.in(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(containerTranslateY, {
-          toValue: 7,
-          duration: 110,
+          toValue: 58,
+          duration: EXIT_DURATION,
           easing: Easing.in(Easing.quad),
           useNativeDriver: true,
         }),
@@ -256,6 +454,7 @@ export default function ReactionPicker({
         if (!visibleRef.current) {
           renderedRef.current = false;
           setRendered(false);
+          setPosition(null);
         }
       });
     }
@@ -271,7 +470,9 @@ export default function ReactionPicker({
     containerOpacity,
     containerScale,
     containerTranslateY,
+    onGeometryChange,
     optionProgress,
+    rootRef,
     visible,
     windowHeight,
     windowWidth,
@@ -279,63 +480,198 @@ export default function ReactionPicker({
 
   if (!rendered) return null;
 
-  return (
-    <Modal
-      transparent
-      visible={rendered}
-      animationType="none"
-      statusBarTranslucent
-      hardwareAccelerated
-      onRequestClose={onDismiss}
-    >
-      <View style={styles.modalRoot}>
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={onDismiss}
-          accessibilityRole="button"
-          accessibilityLabel="Close reaction picker"
-        />
+  const baseWidth = Math.min(
+    46,
+    Math.max(32, ((position?.width || 328) - 14) / REACTION_TYPES.length)
+  );
+  const highlightedIndex = REACTION_TYPES.indexOf(hoveredReaction);
 
-        {position && (
-          <Animated.View
-            style={[
-              styles.picker,
-              {
-                left: position.left,
-                top: position.top,
-                width: position.width,
-                backgroundColor: colors.cardBackground,
-                borderColor: colors.border,
-                shadowColor: colors.black,
-                opacity: containerOpacity,
-                transform: [
-                  { translateY: containerTranslateY },
-                  { scale: containerScale },
-                ],
-              },
-            ]}
-          >
-            {REACTION_TYPES.map((type, index) => (
-              <ReactionOption
-                key={type}
-                type={type}
-                entranceProgress={optionProgress[index]}
-                activeReaction={activeReaction}
-                disabled={disabled}
-                colors={colors}
-                onSelect={onSelect}
-              />
-            ))}
-          </Animated.View>
-        )}
-      </View>
-    </Modal>
+  return (
+    <View pointerEvents="box-none" style={styles.overlayRoot}>
+      {position && (
+        <Animated.View
+          style={[
+            styles.picker,
+            {
+              left: position.left,
+              top: position.top,
+              width: position.width,
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.border,
+              shadowColor: colors.black,
+              opacity: containerOpacity,
+              transform: [{ translateY: containerTranslateY }, { scale: containerScale }],
+            },
+          ]}
+        >
+          {REACTION_TYPES.map((type, index) => (
+            <ReactionOption
+              key={type}
+              type={type}
+              index={index}
+              entranceProgress={optionProgress}
+              highlighted={hoveredReaction === type}
+              highlightedIndex={highlightedIndex}
+              hasHighlight={Boolean(hoveredReaction)}
+              activeReaction={activeReaction}
+              disabled={disabled}
+              colors={colors}
+              baseWidth={baseWidth}
+              pickerVisible={visible}
+              onHover={onHover}
+              onSelect={onSelect}
+            />
+          ))}
+        </Animated.View>
+      )}
+    </View>
   );
 }
 
+export function ReactionPickerProvider({ children, colors }) {
+  const rootRef = useRef(null);
+  const targetRef = useRef(null);
+  const geometryRef = useRef(null);
+  const hoveredRef = useRef(null);
+  const gestureEnteredPickerRef = useRef(false);
+  const clearTargetTimerRef = useRef(null);
+  const [target, setTarget] = useState(null);
+  const [visible, setVisible] = useState(false);
+  const [hoveredReaction, setHoveredReaction] = useState(null);
+
+  const setHover = useCallback((reaction, haptic = true) => {
+    if (hoveredRef.current === reaction) return;
+    hoveredRef.current = reaction;
+    setHoveredReaction(reaction);
+    if (reaction && haptic) Haptics.selectionAsync().catch(() => undefined);
+  }, []);
+
+  const dismissPicker = useCallback(() => {
+    setVisible(false);
+    setHover(null, false);
+    geometryRef.current = null;
+    gestureEnteredPickerRef.current = false;
+    if (clearTargetTimerRef.current) clearTimeout(clearTargetTimerRef.current);
+    clearTargetTimerRef.current = setTimeout(() => {
+      targetRef.current = null;
+      setTarget(null);
+    }, EXIT_DURATION + 30);
+  }, [setHover]);
+
+  const openReactionPicker = useCallback(
+    (nextTarget) => {
+      if (clearTargetTimerRef.current) clearTimeout(clearTargetTimerRef.current);
+      targetRef.current = nextTarget;
+      geometryRef.current = null;
+      gestureEnteredPickerRef.current = false;
+      setHover(null, false);
+      setTarget(nextTarget);
+      setVisible(true);
+      Haptics.selectionAsync().catch(() => undefined);
+    },
+    [setHover]
+  );
+
+  const updateReactionGesture = useCallback(
+    (pageX, pageY) => {
+      const gestureState = getReactionGestureState(
+        pageX,
+        pageY,
+        geometryRef.current,
+        gestureEnteredPickerRef.current
+      );
+      gestureEnteredPickerRef.current = gestureState.enteredPicker;
+      setHover(gestureState.reaction);
+    },
+    [setHover]
+  );
+
+  const finishReactionGesture = useCallback(
+    (pageX, pageY) => {
+      const { reaction } = getReactionGestureState(
+        pageX,
+        pageY,
+        geometryRef.current,
+        gestureEnteredPickerRef.current
+      );
+      const onSelect = targetRef.current?.onSelect;
+      dismissPicker();
+      if (reaction && onSelect) {
+        playHaptic(Haptics.ImpactFeedbackStyle.Medium);
+        onSelect(reaction);
+      }
+    },
+    [dismissPicker]
+  );
+
+  const selectReaction = useCallback(
+    (reaction) => {
+      const onSelect = targetRef.current?.onSelect;
+      dismissPicker();
+      onSelect?.(reaction);
+    },
+    [dismissPicker]
+  );
+
+  const handleGeometryChange = useCallback((geometry) => {
+    geometryRef.current = geometry;
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (clearTargetTimerRef.current) clearTimeout(clearTargetTimerRef.current);
+    },
+    []
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      activeCommentId: visible ? target?.commentId : null,
+      openReactionPicker,
+      updateReactionGesture,
+      finishReactionGesture,
+      cancelReactionGesture: dismissPicker,
+    }),
+    [dismissPicker, finishReactionGesture, openReactionPicker, target?.commentId, updateReactionGesture, visible]
+  );
+
+  return (
+    <ReactionPickerContext.Provider value={contextValue}>
+      <View ref={rootRef} collapsable={false} style={styles.providerRoot}>
+        {children}
+        <ReactionPicker
+          visible={visible}
+          rootRef={rootRef}
+          anchorRef={target?.anchorRef}
+          activeReaction={target?.activeReaction}
+          hoveredReaction={hoveredReaction}
+          colors={colors}
+          disabled={target?.disabled}
+          onGeometryChange={handleGeometryChange}
+          onHover={setHover}
+          onSelect={selectReaction}
+        />
+      </View>
+    </ReactionPickerContext.Provider>
+  );
+}
+
+export const useReactionPicker = () => {
+  const context = useContext(ReactionPickerContext);
+  if (!context) throw new Error("useReactionPicker must be used inside ReactionPickerProvider");
+  return context;
+};
+
 const styles = StyleSheet.create({
-  modalRoot: {
+  providerRoot: {
     flex: 1,
+    position: "relative",
+    overflow: "visible",
+  },
+  overlayRoot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    elevation: 1000,
   },
   picker: {
     position: "absolute",
@@ -347,42 +683,81 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-around",
     overflow: "visible",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 9,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 16,
   },
   optionEntrance: {
-    width: 40,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "visible",
+  },
+  optionHighlighted: {
+    zIndex: 20,
+    elevation: 20,
+  },
+  optionWidth: {
     height: 44,
     alignItems: "center",
     justifyContent: "center",
     overflow: "visible",
   },
   optionButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
   },
   optionEmoji: {
-    fontSize: 25,
-    lineHeight: 32,
+    fontSize: 37,
+    lineHeight: 42,
+  },
+  socialGlyph: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  likeGlyph: {
+    backgroundColor: "#1877F2",
+  },
+  loveGlyph: {
+    backgroundColor: "#F33E58",
+  },
+  careGlyph: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  careFace: {
+    fontSize: 34,
+    lineHeight: 40,
+  },
+  careHeart: {
+    position: "absolute",
+    bottom: 0,
+    fontSize: 12,
+    lineHeight: 14,
   },
   tooltip: {
     position: "absolute",
-    top: -34,
-    zIndex: 20,
+    top: -84,
+    zIndex: 30,
     paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 12,
+    paddingVertical: 4,
+    borderRadius: 11,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 12,
+    elevation: 24,
   },
   tooltipText: {
+    color: "#FFFFFF",
     fontSize: 11,
     lineHeight: 14,
     fontWeight: "700",
