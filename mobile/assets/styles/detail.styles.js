@@ -166,6 +166,9 @@ const createStyles = (colors, isDarkMode = false) =>
     reactionActionButtonPressed: {
       backgroundColor: colors.inputBackground,
     },
+    reactionActionButtonBusy: {
+      opacity: 0.72,
+    },
     reactionActionEmoji: {
       fontSize: 16,
     },
@@ -193,9 +196,6 @@ const createStyles = (colors, isDarkMode = false) =>
       color: colors.textSecondary,
       marginTop: 6,
     },
-    reactionsWrap: {
-      marginTop: 10,
-    },
     reactionSummary: {
       flexDirection: "row",
       alignItems: "center",
@@ -220,50 +220,6 @@ const createStyles = (colors, isDarkMode = false) =>
       fontSize: 13,
       marginLeft: 6,
       fontWeight: "500",
-    },
-    reactionPicker: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      alignItems: "center",
-      alignSelf: "stretch",
-      gap: 4,
-      marginTop: 8,
-      padding: 6,
-      borderRadius: 14,
-      borderWidth: 1,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDarkMode ? 0.3 : 0.12,
-      shadowRadius: 5,
-      elevation: 3,
-    },
-    reactionPickerItem: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    reactionPickerItemActive: {
-      backgroundColor: colors.cardBackground,
-      borderWidth: 1,
-      borderColor: colors.primary,
-    },
-    reactionPickerItemPressed: {
-      backgroundColor: colors.cardBackground,
-      transform: [{ scale: 0.92 }],
-    },
-    reactionPickerClose: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: colors.cardBackground,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    reactionPickerEmoji: {
-      fontSize: 20,
     },
     replyComposer: {
       flexDirection: "row",
