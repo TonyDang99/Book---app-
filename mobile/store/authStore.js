@@ -70,14 +70,38 @@ export const useAuthStore = create((set, get) => ({
   },
 
   checkAuth: async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      const userJson = await AsyncStorage.getItem("user");
-      const user = userJson ? JSON.parse(userJson) : null;
+    let storedToken = null;
+    let storedUser = null;
 
-      set({ token, user });
+    try {
+      storedToken = await AsyncStorage.getItem("token");
+      const userJson = await AsyncStorage.getItem("user");
+      storedUser = userJson ? JSON.parse(userJson) : null;
+
+      if (!storedToken || !storedUser) {
+        await AsyncStorage.multiRemove(["token", "user"]);
+        set({ token: null, user: null });
+        return;
+      }
+
+      // Do not restore an expired/revoked token and let every data screen fail
+      // independently. Validate the persisted session before mounting the app.
+      await fetchApi("/users/me", {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+
+      set({ token: storedToken, user: storedUser });
     } catch (error) {
       console.log("Auth check failed", error);
+
+      if (error.status === 401 || !storedToken || !storedUser) {
+        await AsyncStorage.multiRemove(["token", "user"]);
+        set({ token: null, user: null });
+      } else {
+        // Preserve the session during a temporary network outage so retrying
+        // does not require the user to sign in again.
+        set({ token: storedToken, user: storedUser });
+      }
     } finally {
       set({ isCheckingAuth: false });
     }

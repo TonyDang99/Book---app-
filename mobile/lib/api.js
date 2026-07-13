@@ -32,7 +32,9 @@ export const fetchApi = async (path, options = {}) => {
       ? `Request failed with status ${response.status}`
       : data?.message || `Request failed with status ${response.status}`;
 
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   if (data?._invalidJson) {

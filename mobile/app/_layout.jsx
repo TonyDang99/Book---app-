@@ -15,7 +15,7 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
 
-  const { checkAuth, user, token } = useAuthStore();
+  const { checkAuth, user, token, isCheckingAuth } = useAuthStore();
   const mode = useThemeStore((state) => state.mode);
   const hydrateTheme = useThemeStore((state) => state.hydrateTheme);
 
@@ -26,12 +26,12 @@ export default function RootLayout() {
   usePushNotifications();
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (fontsLoaded && !isCheckingAuth) SplashScreen.hideAsync();
+  }, [fontsLoaded, isCheckingAuth]);
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [checkAuth]);
 
   useEffect(() => {
     hydrateTheme();
@@ -39,12 +39,16 @@ export default function RootLayout() {
 
   // handle navigation based on the auth state
   useEffect(() => {
+    if (isCheckingAuth) return;
+
     const inAuthScreen = segments[0] === "(auth)";
     const isSignedIn = user && token;
 
     if (!isSignedIn && !inAuthScreen) router.replace("/(auth)");
     else if (isSignedIn && inAuthScreen) router.replace("/(tabs)");
-  }, [user, token, segments]);
+  }, [isCheckingAuth, user, token, segments, router]);
+
+  if (!fontsLoaded || isCheckingAuth) return null;
 
   return (
     <SafeAreaProvider>

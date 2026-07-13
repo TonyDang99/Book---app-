@@ -56,7 +56,7 @@ export default function Profile() {
       hasLoadedProfile.current = true;
     } catch (error) {
       console.error("Error fetching data:", error);
-      Alert.alert("Error", "Failed to load profile data. Pull down to refresh.");
+      Alert.alert("Unable to load profile", error.message || "Pull down to try again.");
     } finally {
       setIsLoading(false);
     }
