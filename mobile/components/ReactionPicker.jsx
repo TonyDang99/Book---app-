@@ -27,6 +27,7 @@ const PICKER_HEIGHT = 52;
 const PICKER_GAP = 9;
 const EXPANDED_ICON_OVERFLOW = 80;
 const EXIT_DURATION = 70;
+const HOVER_DISMISS_DELAY = 180;
 
 const ReactionPickerContext = createContext(null);
 
@@ -336,6 +337,8 @@ function ReactionPicker({
   disabled = false,
   onGeometryChange,
   onHover,
+  onHoverAreaEnter,
+  onHoverAreaLeave,
   onSelect,
 }) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -504,24 +507,31 @@ function ReactionPicker({
             },
           ]}
         >
-          {REACTION_TYPES.map((type, index) => (
-            <ReactionOption
-              key={type}
-              type={type}
-              index={index}
-              entranceProgress={optionProgress}
-              highlighted={hoveredReaction === type}
-              highlightedIndex={highlightedIndex}
-              hasHighlight={Boolean(hoveredReaction)}
-              activeReaction={activeReaction}
-              disabled={disabled}
-              colors={colors}
-              baseWidth={baseWidth}
-              pickerVisible={visible}
-              onHover={onHover}
-              onSelect={onSelect}
-            />
-          ))}
+          <Pressable
+            accessible={false}
+            onHoverIn={onHoverAreaEnter}
+            onHoverOut={onHoverAreaLeave}
+            style={styles.pickerHoverSurface}
+          >
+            {REACTION_TYPES.map((type, index) => (
+              <ReactionOption
+                key={type}
+                type={type}
+                index={index}
+                entranceProgress={optionProgress}
+                highlighted={hoveredReaction === type}
+                highlightedIndex={highlightedIndex}
+                hasHighlight={Boolean(hoveredReaction)}
+                activeReaction={activeReaction}
+                disabled={disabled}
+                colors={colors}
+                baseWidth={baseWidth}
+                pickerVisible={visible}
+                onHover={onHover}
+                onSelect={onSelect}
+              />
+            ))}
+          </Pressable>
         </Animated.View>
       )}
     </View>
@@ -535,6 +545,7 @@ export function ReactionPickerProvider({ children, colors }) {
   const hoveredRef = useRef(null);
   const gestureEnteredPickerRef = useRef(false);
   const clearTargetTimerRef = useRef(null);
+  const hoverDismissTimerRef = useRef(null);
   const [target, setTarget] = useState(null);
   const [visible, setVisible] = useState(false);
   const [hoveredReaction, setHoveredReaction] = useState(null);
@@ -546,7 +557,14 @@ export function ReactionPickerProvider({ children, colors }) {
     if (reaction && haptic) Haptics.selectionAsync().catch(() => undefined);
   }, []);
 
+  const keepReactionPickerOpen = useCallback(() => {
+    if (!hoverDismissTimerRef.current) return;
+    clearTimeout(hoverDismissTimerRef.current);
+    hoverDismissTimerRef.current = null;
+  }, []);
+
   const dismissPicker = useCallback(() => {
+    keepReactionPickerOpen();
     setVisible(false);
     setHover(null, false);
     geometryRef.current = null;
@@ -556,10 +574,19 @@ export function ReactionPickerProvider({ children, colors }) {
       targetRef.current = null;
       setTarget(null);
     }, EXIT_DURATION + 30);
-  }, [setHover]);
+  }, [keepReactionPickerOpen, setHover]);
+
+  const scheduleReactionPickerDismiss = useCallback(() => {
+    keepReactionPickerOpen();
+    hoverDismissTimerRef.current = setTimeout(() => {
+      hoverDismissTimerRef.current = null;
+      dismissPicker();
+    }, HOVER_DISMISS_DELAY);
+  }, [dismissPicker, keepReactionPickerOpen]);
 
   const openReactionPicker = useCallback(
     (nextTarget) => {
+      keepReactionPickerOpen();
       if (clearTargetTimerRef.current) clearTimeout(clearTargetTimerRef.current);
       targetRef.current = nextTarget;
       geometryRef.current = null;
@@ -569,7 +596,7 @@ export function ReactionPickerProvider({ children, colors }) {
       setVisible(true);
       Haptics.selectionAsync().catch(() => undefined);
     },
-    [setHover]
+    [keepReactionPickerOpen, setHover]
   );
 
   const updateReactionGesture = useCallback(
@@ -620,6 +647,7 @@ export function ReactionPickerProvider({ children, colors }) {
   useEffect(
     () => () => {
       if (clearTargetTimerRef.current) clearTimeout(clearTargetTimerRef.current);
+      if (hoverDismissTimerRef.current) clearTimeout(hoverDismissTimerRef.current);
     },
     []
   );
@@ -628,11 +656,22 @@ export function ReactionPickerProvider({ children, colors }) {
     () => ({
       activeCommentId: visible ? target?.commentId : null,
       openReactionPicker,
+      keepReactionPickerOpen,
+      scheduleReactionPickerDismiss,
       updateReactionGesture,
       finishReactionGesture,
       cancelReactionGesture: dismissPicker,
     }),
-    [dismissPicker, finishReactionGesture, openReactionPicker, target?.commentId, updateReactionGesture, visible]
+    [
+      dismissPicker,
+      finishReactionGesture,
+      keepReactionPickerOpen,
+      openReactionPicker,
+      scheduleReactionPickerDismiss,
+      target?.commentId,
+      updateReactionGesture,
+      visible,
+    ]
   );
 
   return (
@@ -649,6 +688,8 @@ export function ReactionPickerProvider({ children, colors }) {
           disabled={target?.disabled}
           onGeometryChange={handleGeometryChange}
           onHover={setHover}
+          onHoverAreaEnter={keepReactionPickerOpen}
+          onHoverAreaLeave={scheduleReactionPickerDismiss}
           onSelect={selectReaction}
         />
       </View>
@@ -679,14 +720,18 @@ const styles = StyleSheet.create({
     borderRadius: PICKER_HEIGHT / 2,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 7,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
     overflow: "visible",
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.22,
     shadowRadius: 10,
     elevation: 16,
+  },
+  pickerHoverSurface: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    overflow: "visible",
   },
   optionEntrance: {
     height: 44,
@@ -707,6 +752,7 @@ const styles = StyleSheet.create({
   optionButton: {
     width: 42,
     height: 42,
+    cursor: "pointer",
     borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",

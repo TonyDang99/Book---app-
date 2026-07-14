@@ -158,6 +158,7 @@ const createStyles = (colors, isDarkMode = false) =>
     },
     reactionActionButton: {
       minHeight: 30,
+      cursor: "pointer",
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 6,

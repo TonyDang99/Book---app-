@@ -102,6 +102,7 @@ export default function CommentItem({
   const {
     activeCommentId,
     openReactionPicker,
+    scheduleReactionPickerDismiss,
     updateReactionGesture,
     finishReactionGesture,
     cancelReactionGesture,
@@ -202,9 +203,10 @@ export default function CommentItem({
   selectReactionRef.current = handleReaction;
 
   const handleQuickReaction = useCallback(() => {
+    cancelReactionGesture();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
     handleReaction(activeReaction || "like");
-  }, [activeReaction, handleReaction]);
+  }, [activeReaction, cancelReactionGesture, handleReaction]);
 
   const handleOpenPicker = useCallback(() => {
     if (reactionRequestInFlight.current) return;
@@ -216,6 +218,10 @@ export default function CommentItem({
       onSelect: (type) => selectReactionRef.current?.(type),
     });
   }, [activeReaction, comment._id, openReactionPicker, reacting]);
+
+  const handleReactionHoverOut = useCallback(() => {
+    scheduleReactionPickerDismiss();
+  }, [scheduleReactionPickerDismiss]);
 
   const reactionGesture = useMemo(() => {
     const holdAndSlide = Gesture.Pan()
@@ -316,10 +322,12 @@ export default function CommentItem({
                 { transform: [{ scale: reactionActionScale }] },
               ]}
             >
-              <View
+              <Pressable
                 ref={reactionButtonRef}
                 collapsable={false}
                 hitSlop={8}
+                onHoverIn={handleOpenPicker}
+                onHoverOut={handleReactionHoverOut}
                 style={[
                   styles.reactionActionButton,
                   showPicker && styles.reactionActionButtonPressed,
@@ -344,7 +352,7 @@ export default function CommentItem({
                   <Text style={styles.reactionActionEmoji}>{REACTION_EMOJI[activeReaction]}</Text>
                 ) : null}
                 <Text style={[styles.reactionActionText, { color: actionColor }]}>{actionLabel}</Text>
-              </View>
+              </Pressable>
             </Animated.View>
           </GestureDetector>
 
