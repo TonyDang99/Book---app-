@@ -8,13 +8,13 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 
 import { useReactionPicker } from "./ReactionPicker";
+import ReactionArtwork from "./ReactionArtwork";
 import { useAuthStore } from "../store/authStore";
 import { fetchApi } from "../lib/api";
 import { buildOptimisticReaction } from "../lib/reactions";
 import { formatPublishDate } from "../lib/utils";
 import {
   REACTION_TYPES,
-  REACTION_EMOJI,
   REACTION_LABEL,
   REACTION_COLOR,
 } from "../constants/reactions";
@@ -349,7 +349,7 @@ export default function CommentItem({
                 onAccessibilityTap={handleQuickReaction}
               >
                 {activeReaction ? (
-                  <Text style={styles.reactionActionEmoji}>{REACTION_EMOJI[activeReaction]}</Text>
+                  <ReactionArtwork type={activeReaction} size={16} />
                 ) : null}
                 <Text style={[styles.reactionActionText, { color: actionColor }]}>{actionLabel}</Text>
               </Pressable>
@@ -391,7 +391,7 @@ export default function CommentItem({
                     },
                   ]}
                 >
-                  <Text style={styles.reactionBadgeEmoji}>{REACTION_EMOJI[type]}</Text>
+                  <ReactionArtwork type={type} size={18} />
                 </View>
               ))}
             </View>

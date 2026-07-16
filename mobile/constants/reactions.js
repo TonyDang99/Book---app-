@@ -1,15 +1,5 @@
 export const REACTION_TYPES = ["like", "love", "care", "haha", "wow", "sad", "angry"];
 
-export const REACTION_EMOJI = {
-  like: "👍",
-  love: "❤️",
-  care: "🤗",
-  haha: "😂",
-  wow: "😮",
-  sad: "😢",
-  angry: "😡",
-};
-
 export const REACTION_LABEL = {
   like: "Like",
   love: "Love",

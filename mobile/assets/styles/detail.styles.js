@@ -173,9 +173,6 @@ const createStyles = (colors, isDarkMode = false) =>
     reactionActionButtonBusy: {
       opacity: 0.72,
     },
-    reactionActionEmoji: {
-      fontSize: 16,
-    },
     reactionActionText: {
       fontSize: 13,
       fontWeight: "700",
@@ -216,9 +213,6 @@ const createStyles = (colors, isDarkMode = false) =>
       borderWidth: 1,
       justifyContent: "center",
       alignItems: "center",
-    },
-    reactionBadgeEmoji: {
-      fontSize: 12,
     },
     reactionCount: {
       fontSize: 13,

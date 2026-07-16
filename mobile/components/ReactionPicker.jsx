@@ -16,10 +16,10 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
-import { REACTION_EMOJI, REACTION_LABEL, REACTION_TYPES } from "../constants/reactions";
+import ReactionArtwork from "./ReactionArtwork";
+import { REACTION_LABEL, REACTION_TYPES } from "../constants/reactions";
 import { getReactionGestureState } from "../lib/reactions";
 
 const EDGE_PADDING = 12;
@@ -35,66 +35,9 @@ const playHaptic = (style) => {
   Haptics.impactAsync(style).catch(() => undefined);
 };
 
-const ReactionGlyph = ({ type, idleProgress }) => {
-  if (type === "like") {
-    return (
-      <View style={[styles.socialGlyph, styles.likeGlyph]}>
-        <Animated.View
-          style={{
-            transform: [
-              {
-                rotate: idleProgress.interpolate({
-                  inputRange: [0, 0.5, 1],
-                  outputRange: ["-5deg", "7deg", "-5deg"],
-                }),
-              },
-              {
-                scale: idleProgress.interpolate({
-                  inputRange: [0, 0.5, 1],
-                  outputRange: [0.9, 1.08, 0.9],
-                }),
-              },
-            ],
-          }}
-        >
-          <Ionicons name="thumbs-up" size={25} color="#FFFFFF" />
-        </Animated.View>
-      </View>
-    );
-  }
-
-  if (type === "love") {
-    return (
-      <View style={[styles.socialGlyph, styles.loveGlyph]}>
-        <Animated.View
-          style={{
-            transform: [
-              {
-                scale: idleProgress.interpolate({
-                  inputRange: [0, 0.42, 0.7, 1],
-                  outputRange: [0.62, 1.08, 0.78, 0.62],
-                }),
-              },
-            ],
-          }}
-        >
-          <Ionicons name="heart" size={26} color="#FFFFFF" />
-        </Animated.View>
-      </View>
-    );
-  }
-
-  if (type === "care") {
-    return (
-      <View style={styles.careGlyph}>
-        <Text style={styles.careFace}>🤗</Text>
-        <Text style={styles.careHeart}>❤️</Text>
-      </View>
-    );
-  }
-
-  return <Text style={styles.optionEmoji}>{REACTION_EMOJI[type]}</Text>;
-};
+const ReactionGlyph = ({ type, artworkProgress }) => (
+  <ReactionArtwork type={type} progress={artworkProgress} />
+);
 
 function ReactionOption({
   type,
@@ -115,6 +58,7 @@ function ReactionOption({
   const restingProgress = useRef(new Animated.Value(0)).current;
   const reflowX = useRef(new Animated.Value(0)).current;
   const idleProgress = useRef(new Animated.Value(0)).current;
+  const artworkProgress = useRef(new Animated.Value(0)).current;
   const distanceFromHighlight = highlightedIndex < 0 ? 0 : index - highlightedIndex;
   const reflowMagnitude =
     { 1: 12, 2: 8, 3: 4 }[Math.abs(distanceFromHighlight)] ||
@@ -177,6 +121,34 @@ function ReactionOption({
 
     return () => idleAnimation.stop();
   }, [hasHighlight, idleProgress, index, pickerVisible]);
+
+  useEffect(() => {
+    artworkProgress.stopAnimation();
+    artworkProgress.setValue(0);
+    if (!pickerVisible) return undefined;
+
+    const artworkAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.delay(index * 32),
+        Animated.timing(artworkProgress, {
+          toValue: 1,
+          duration: 480,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(artworkProgress, {
+          toValue: 0,
+          duration: 480,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.delay(90),
+      ])
+    );
+    artworkAnimation.start();
+
+    return () => artworkAnimation.stop();
+  }, [artworkProgress, index, pickerVisible]);
 
   const handleSelect = () => {
     playHaptic(Haptics.ImpactFeedbackStyle.Medium);
@@ -318,7 +290,7 @@ function ReactionOption({
               accessibilityLabel={REACTION_LABEL[type]}
               accessibilityState={{ selected: isActive, disabled }}
             >
-              <ReactionGlyph type={type} idleProgress={idleProgress} />
+              <ReactionGlyph type={type} artworkProgress={artworkProgress} />
             </Pressable>
           </Animated.View>
         </Animated.View>
@@ -756,39 +728,6 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
-  },
-  optionEmoji: {
-    fontSize: 37,
-    lineHeight: 42,
-  },
-  socialGlyph: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  likeGlyph: {
-    backgroundColor: "#1877F2",
-  },
-  loveGlyph: {
-    backgroundColor: "#F33E58",
-  },
-  careGlyph: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  careFace: {
-    fontSize: 34,
-    lineHeight: 40,
-  },
-  careHeart: {
-    position: "absolute",
-    bottom: 0,
-    fontSize: 12,
-    lineHeight: 14,
   },
   tooltip: {
     position: "absolute",
