@@ -5,6 +5,7 @@ import {
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   Text,
@@ -14,6 +15,8 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -28,6 +31,16 @@ import { useMessageStore } from "../../store/messageStore";
 const formatMessageTime = (dateString) =>
   new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+const hasPhotoAccess = (permission) =>
+  permission?.granted || permission?.accessPrivileges === "limited";
+
+const showSettingsAlert = (title, message) => {
+  Alert.alert(title, message, [
+    { text: "Cancel", style: "cancel" },
+    { text: "Open Settings", onPress: () => Linking.openSettings() },
+  ]);
+};
+
 export default function ChatScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -39,6 +52,8 @@ export default function ChatScreen() {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
+  const [pendingImageUri, setPendingImageUri] = useState(null);
+  const [pendingImageDataUrl, setPendingImageDataUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
@@ -46,6 +61,7 @@ export default function ChatScreen() {
 
   const conversationId = Array.isArray(id) ? id[0] : id;
   const currentUserId = user?.id || user?._id;
+  const canSend = Boolean(messageText.trim() || pendingImageDataUrl);
 
   const fetchMessages = useCallback(
     async (silent = false) => {
@@ -100,24 +116,134 @@ export default function ChatScreen() {
     };
   }, []);
 
+  const clearPendingImage = () => {
+    setPendingImageUri(null);
+    setPendingImageDataUrl(null);
+  };
+
+  const processPickedAsset = async (asset) => {
+    let base64 = asset.base64;
+    if (!base64) {
+      base64 = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: "base64",
+      });
+    }
+
+    const uriParts = asset.uri.split(".");
+    const fileType = uriParts[uriParts.length - 1];
+    const imageType = fileType ? `image/${fileType.toLowerCase()}` : "image/jpeg";
+    const imageDataUrl = `data:${imageType};base64,${base64}`;
+
+    setPendingImageUri(asset.uri);
+    setPendingImageDataUrl(imageDataUrl);
+  };
+
+  const takePhoto = async () => {
+    try {
+      if (Platform.OS !== "web") {
+        let permission = await ImagePicker.getCameraPermissionsAsync();
+        if (!permission.granted && permission.canAskAgain) {
+          permission = await ImagePicker.requestCameraPermissionsAsync();
+        }
+        if (!permission.granted) {
+          if (!permission.canAskAgain) {
+            showSettingsAlert(
+              "Camera Permission Required",
+              "Camera access is turned off. Open Settings and allow camera access to take photos for messages."
+            );
+          } else {
+            Alert.alert(
+              "Camera Permission Required",
+              "Allow camera access so you can take photos to send in messages."
+            );
+          }
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: "images",
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (result.canceled) return;
+      await processPickedAsset(result.assets[0]);
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "There was a problem taking your photo");
+    }
+  };
+
+  const pickFromLibrary = async () => {
+    try {
+      if (Platform.OS !== "web") {
+        let permission = await ImagePicker.getMediaLibraryPermissionsAsync();
+        if (!hasPhotoAccess(permission) && permission.canAskAgain) {
+          permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        }
+        if (!hasPhotoAccess(permission)) {
+          if (!permission.canAskAgain) {
+            showSettingsAlert(
+              "Photo Permission Required",
+              "Photo access is turned off. Open Settings and allow photo access to send photos in messages."
+            );
+          } else {
+            Alert.alert(
+              "Photo Permission Required",
+              "Allow photo access so you can send photos in messages."
+            );
+          }
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: "images",
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (result.canceled) return;
+      await processPickedAsset(result.assets[0]);
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "There was a problem selecting your image");
+    }
+  };
+
+  const handleAttachPress = () => {
+    if (sending) return;
+
+    Alert.alert("Add photo", "Choose how you want to add a photo to your message.", [
+      { text: "Take photo", onPress: takePhoto },
+      { text: "Choose from library", onPress: pickFromLibrary },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
   const handleSend = async () => {
     const text = messageText.trim();
-    if (!text || sending) return;
+    if ((!text && !pendingImageDataUrl) || sending) return;
 
     try {
       setSending(true);
+      const body = { text };
+      if (pendingImageDataUrl) body.image = pendingImageDataUrl;
+
       const message = await fetchApi(`/messages/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify(body),
       });
       setMessages((current) =>
         current.some((item) => item._id === message._id) ? current : [...current, message]
       );
       setMessageText("");
+      clearPendingImage();
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to send message");
     } finally {
@@ -127,6 +253,8 @@ export default function ChatScreen() {
 
   const renderMessage = ({ item }) => {
     const isMine = item.sender?._id?.toString() === currentUserId?.toString();
+    const hasText = Boolean(item.text?.trim());
+
     return (
       <View
         style={[
@@ -140,9 +268,18 @@ export default function ChatScreen() {
             isMine ? styles.myMessageBubble : styles.theirMessageBubble,
           ]}
         >
-          <Text style={[styles.messageText, isMine ? styles.myMessageText : styles.theirMessageText]}>
-            {item.text}
-          </Text>
+          {item.imageUrl ? (
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={styles.messageImage}
+              contentFit="cover"
+            />
+          ) : null}
+          {hasText ? (
+            <Text style={[styles.messageText, isMine ? styles.myMessageText : styles.theirMessageText]}>
+              {item.text}
+            </Text>
+          ) : null}
           <Text style={[styles.messageTime, isMine ? styles.myMessageTime : styles.theirMessageTime]}>
             {formatMessageTime(item.createdAt)}
           </Text>
@@ -203,7 +340,7 @@ export default function ChatScreen() {
 
       <View
         style={[
-          styles.composer,
+          styles.composerWrap,
           {
             marginBottom: Platform.OS === "ios" ? keyboardInset : 0,
             paddingBottom:
@@ -211,29 +348,59 @@ export default function ChatScreen() {
           },
         ]}
       >
-        <TextInput
-          style={styles.messageInput}
-          placeholder="Message..."
-          placeholderTextColor={colors.placeholderText}
-          value={messageText}
-          onChangeText={setMessageText}
-          multiline
-          maxLength={2000}
-          onFocus={() => setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 120)}
-        />
-        <Pressable
-          style={[styles.sendButton, (!messageText.trim() || sending) && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={!messageText.trim() || sending}
-          accessibilityRole="button"
-          accessibilityLabel="Send message"
-        >
-          {sending ? (
-            <ActivityIndicator size="small" color={colors.white} />
-          ) : (
-            <Ionicons name="send" size={18} color={colors.white} />
-          )}
-        </Pressable>
+        {pendingImageUri ? (
+          <View style={styles.imagePreviewRow}>
+            <Image
+              source={{ uri: pendingImageUri }}
+              style={styles.imagePreviewThumb}
+              contentFit="cover"
+            />
+            <Pressable
+              style={styles.imagePreviewClear}
+              onPress={clearPendingImage}
+              disabled={sending}
+              accessibilityRole="button"
+              accessibilityLabel="Remove photo"
+            >
+              <Ionicons name="close" size={16} color={colors.textPrimary} />
+            </Pressable>
+          </View>
+        ) : null}
+
+        <View style={styles.composer}>
+          <Pressable
+            style={styles.attachButton}
+            onPress={handleAttachPress}
+            disabled={sending}
+            accessibilityRole="button"
+            accessibilityLabel="Add photo"
+          >
+            <Ionicons name="camera-outline" size={24} color={colors.primary} />
+          </Pressable>
+          <TextInput
+            style={styles.messageInput}
+            placeholder={pendingImageUri ? "Add a caption..." : "Message..."}
+            placeholderTextColor={colors.placeholderText}
+            value={messageText}
+            onChangeText={setMessageText}
+            multiline
+            maxLength={2000}
+            onFocus={() => setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 120)}
+          />
+          <Pressable
+            style={[styles.sendButton, (!canSend || sending) && styles.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={!canSend || sending}
+            accessibilityRole="button"
+            accessibilityLabel="Send message"
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Ionicons name="send" size={18} color={colors.white} />
+            )}
+          </Pressable>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );

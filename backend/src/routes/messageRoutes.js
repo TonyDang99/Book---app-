@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 
+import cloudinary from "../lib/cloudinary.js";
 import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
@@ -153,8 +154,12 @@ router.get("/conversations/:id/messages", protectRoute, async (req, res) => {
 
 router.post("/conversations/:id/messages", protectRoute, async (req, res) => {
   try {
-    const text = req.body.text?.trim();
-    if (!text) return res.status(400).json({ message: "Message cannot be empty" });
+    const text = req.body.text?.trim() || "";
+    const image = req.body.image;
+
+    if (!text && !image) {
+      return res.status(400).json({ message: "Message cannot be empty" });
+    }
     if (text.length > 2000) {
       return res.status(400).json({ message: "Message must be 2000 characters or less" });
     }
@@ -165,14 +170,23 @@ router.post("/conversations/:id/messages", protectRoute, async (req, res) => {
     const conversation = await findConversationForUser(req.params.id, req.user._id);
     if (!conversation) return res.status(404).json({ message: "Conversation not found" });
 
+    let imageUrl = null;
+    if (image) {
+      const uploadResponse = await cloudinary.uploader.upload(image);
+      imageUrl = uploadResponse.secure_url;
+    }
+
     const message = await Message.create({
       conversation: conversation._id,
       sender: req.user._id,
       text,
+      imageUrl,
     });
+
+    const lastMessage = text || "Photo";
     await Conversation.findByIdAndUpdate(conversation._id, {
       $set: {
-        lastMessage: text,
+        lastMessage,
         lastSender: req.user._id,
         lastMessageAt: message.createdAt,
       },
@@ -182,11 +196,17 @@ router.post("/conversations/:id/messages", protectRoute, async (req, res) => {
     const recipientId = conversation.participants.find(
       (participantId) => participantId.toString() !== req.user._id.toString()
     );
+    const notificationMessage = imageUrl
+      ? text
+        ? `${req.user.username} sent you a photo: ${text.slice(0, 100)}`
+        : `${req.user.username} sent you a photo`
+      : `${req.user.username} sent you a message: ${text.slice(0, 100)}`;
+
     await createNotification({
       recipientId,
       actorId: req.user._id,
       type: "message",
-      message: `${req.user.username} sent you a message: ${text.slice(0, 100)}`,
+      message: notificationMessage,
       conversationId: conversation._id,
     });
 

@@ -189,6 +189,7 @@ const createStyles = (colors, isDarkMode = false) =>
       paddingHorizontal: 13,
       paddingVertical: 9,
       borderRadius: 18,
+      overflow: "hidden",
     },
     myMessageBubble: {
       backgroundColor: colors.primary,
@@ -199,6 +200,13 @@ const createStyles = (colors, isDarkMode = false) =>
       borderWidth: 1,
       borderColor: colors.border,
       borderBottomLeftRadius: 5,
+    },
+    messageImage: {
+      width: 220,
+      height: 220,
+      borderRadius: 12,
+      marginBottom: 6,
+      backgroundColor: colors.inputBackground,
     },
     messageText: {
       fontSize: 14,
@@ -221,15 +229,46 @@ const createStyles = (colors, isDarkMode = false) =>
     theirMessageTime: {
       color: colors.textSecondary,
     },
+    composerWrap: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.cardBackground,
+    },
+    imagePreviewRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingTop: 10,
+      gap: 10,
+    },
+    imagePreviewThumb: {
+      width: 64,
+      height: 64,
+      borderRadius: 10,
+      backgroundColor: colors.inputBackground,
+    },
+    imagePreviewClear: {
+      width: 28,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 14,
+      backgroundColor: colors.inputBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
     composer: {
       flexDirection: "row",
       alignItems: "flex-end",
       gap: 9,
       paddingHorizontal: 12,
       paddingVertical: 10,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      backgroundColor: colors.cardBackground,
+    },
+    attachButton: {
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
     },
     messageInput: {
       flex: 1,

@@ -15,9 +15,13 @@ const messageSchema = new mongoose.Schema(
     },
     text: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
       maxlength: 2000,
+    },
+    imageUrl: {
+      type: String,
+      default: null,
     },
     readAt: {
       type: Date,
