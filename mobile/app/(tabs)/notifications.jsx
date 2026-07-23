@@ -6,7 +6,7 @@ import * as ExpoNotifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
-import createStyles from "../../assets/styles/notifications.styles";
+import { createNotificationStyles as createStyles } from "../../assets/styles/communication.styles";
 import Loader from "../../components/Loader";
 import useTheme from "../../hooks/useTheme";
 import { fetchApi } from "../../lib/api";

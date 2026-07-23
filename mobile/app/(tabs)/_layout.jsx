@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -15,16 +15,21 @@ import useTheme from "../../hooks/useTheme";
 import { useAuthStore } from "../../store/authStore";
 import { useNotificationStore } from "../../store/notificationStore";
 import { useMessageStore } from "../../store/messageStore";
-
-const withAlpha = (hex, alpha) => {
-  const normalized = hex.replace("#", "");
-  const bigint = parseInt(normalized, 16);
-  const red = (bigint >> 16) & 255;
-  const green = (bigint >> 8) & 255;
-  const blue = bigint & 255;
-
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
-};
+import {
+  tabsStyles as styles,
+  getActiveLensAnimatedStyle,
+  getActiveLensGlowStyle,
+  getActiveLensStyle,
+  getGlassBackgroundStyle,
+  getGlassHighlightStyle,
+  getIconAnimatedStyle,
+  getLabelAnimatedStyle,
+  getTabBarDockStyle,
+  getTabBarShellStyle,
+  getTabLabelColorStyle,
+  getTabScreenOptions,
+  withAlpha,
+} from "../../assets/styles/shared.styles";
 
 export default function TabLayout() {
   const { colors } = useTheme();
@@ -41,16 +46,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
-        headerTitleStyle: {
-          color: colors.textPrimary,
-          fontWeight: "600",
-        },
-        headerShadowVisible: false,
-      }}
+      screenOptions={getTabScreenOptions(colors)}
       tabBar={(props) => <LiquidGlassTabBar {...props} />}
     >
       <Tabs.Screen
@@ -143,41 +139,31 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
     );
   }, [activeIndex, morphScale, state.index]);
 
-  const activeLensStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: activeIndex.value * itemWidth },
-      { scaleX: morphScale.value },
-      { scaleY: 2 - morphScale.value },
-    ],
-  }));
+  const activeLensStyle = useAnimatedStyle(() =>
+    getActiveLensAnimatedStyle(activeIndex, morphScale, itemWidth)
+  );
 
   return (
     <View
       pointerEvents="box-none"
       style={[
         styles.tabBarDock,
-        {
-          bottom: Math.max(insets.bottom, 12),
-        },
+        getTabBarDockStyle(insets.bottom),
       ]}
     >
       <View
         style={[
           styles.tabBarShell,
-          {
-            borderColor: glassBorder,
-            shadowColor: colors.black,
-            shadowOpacity: isDarkMode ? 0.36 : 0.16,
-          },
+          getTabBarShellStyle(colors, glassBorder, isDarkMode),
         ]}
         onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
       >
-        <BlurView intensity={72} tint={isDarkMode ? "dark" : "light"} style={StyleSheet.absoluteFill}>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: glassBackground }]} />
+        <BlurView intensity={72} tint={isDarkMode ? "dark" : "light"} style={styles.absoluteFill}>
+          <View style={[styles.absoluteFill, getGlassBackgroundStyle(glassBackground)]} />
           <View
             style={[
               styles.glassHighlight,
-              { backgroundColor: withAlpha(colors.white, isDarkMode ? 0.08 : 0.38) },
+              getGlassHighlightStyle(colors, isDarkMode),
             ]}
           />
         </BlurView>
@@ -186,18 +172,17 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
           <Animated.View
             style={[
               styles.activeLens,
-              {
-                left: horizontalPadding,
-                width: itemWidth,
-                backgroundColor: activeGlass,
-                borderColor: withAlpha(colors.white, isDarkMode ? 0.18 : 0.7),
-                shadowColor: colors.primary,
-                shadowOpacity: isDarkMode ? 0.24 : 0.18,
-              },
+              getActiveLensStyle(
+                horizontalPadding,
+                itemWidth,
+                activeGlass,
+                colors,
+                isDarkMode
+              ),
               activeLensStyle,
             ]}
           >
-            <View style={[styles.activeLensGlow, { backgroundColor: activeGlow }]} />
+            <View style={[styles.activeLensGlow, getActiveLensGlowStyle(activeGlow)]} />
           </Animated.View>
         )}
 
@@ -262,17 +247,9 @@ function LiquidTabButton({ route, options, isFocused, color, onPress, onLongPres
     });
   }, [iconProgress, isFocused]);
 
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: -2 * iconProgress.value },
-      { scale: 1 + iconProgress.value * 0.1 },
-    ],
-  }));
+  const iconStyle = useAnimatedStyle(() => getIconAnimatedStyle(iconProgress));
 
-  const labelStyle = useAnimatedStyle(() => ({
-    opacity: 0.72 + iconProgress.value * 0.28,
-    transform: [{ translateY: -iconProgress.value }],
-  }));
+  const labelStyle = useAnimatedStyle(() => getLabelAnimatedStyle(iconProgress));
 
   return (
     <Pressable
@@ -293,93 +270,12 @@ function LiquidTabButton({ route, options, isFocused, color, onPress, onLongPres
           </View>
         )}
       </Animated.View>
-      <Animated.Text style={[styles.tabBarLabel, { color }, labelStyle]} numberOfLines={1}>
+      <Animated.Text
+        style={[styles.tabBarLabel, getTabLabelColorStyle(color), labelStyle]}
+        numberOfLines={1}
+      >
         {label}
       </Animated.Text>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBadge: {
-    position: "absolute",
-    top: -7,
-    right: -12,
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#e74c3c",
-    borderWidth: 1.5,
-    borderColor: "#ffffff",
-  },
-  tabBadgeText: {
-    color: "#ffffff",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  tabBarDock: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    height: 70,
-  },
-  tabBarShell: {
-    flex: 1,
-    borderRadius: 30,
-    borderWidth: 1,
-    overflow: "hidden",
-    shadowOffset: { width: 0, height: 14 },
-    shadowRadius: 26,
-    elevation: 14,
-  },
-  tabItemsRow: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  tabButton: {
-    flex: 1,
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 24,
-    gap: 2,
-  },
-  activeLens: {
-    position: "absolute",
-    top: 8,
-    bottom: 8,
-    borderRadius: 24,
-    borderWidth: 1,
-    overflow: "hidden",
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  activeLensGlow: {
-    position: "absolute",
-    left: 10,
-    right: 10,
-    bottom: -10,
-    height: 22,
-    borderRadius: 11,
-  },
-  tabBarLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  glassHighlight: {
-    position: "absolute",
-    top: 1,
-    left: 18,
-    right: 18,
-    height: 1,
-    borderRadius: 1,
-  },
-});

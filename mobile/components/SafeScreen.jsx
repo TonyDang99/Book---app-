@@ -1,21 +1,13 @@
-import { View, StyleSheet } from "react-native";
+import { useMemo } from "react";
+import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import useTheme from "../hooks/useTheme";
+import { createSafeScreenStyles as createStyles } from "../assets/styles/shared.styles";
 
+export default function SafeScreen({ children }) {
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
 
-export default function SafeScreen({children}) {
-    const insets = useSafeAreaInsets();
-    const { colors } = useTheme();
-
-  return (
-    <View style={[styles.container, {paddingTop: insets.top, backgroundColor: colors.background}]}>
-      {children}
-    </View>
-  );
+  return <View style={styles.container}>{children}</View>;
 }
-  const styles = StyleSheet.create({
-
-    container: {
-      flex: 1,
-    },
-});

@@ -9,6 +9,7 @@ import { useThemeStore } from "../store/themeStore";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import usePushNotifications from "../hooks/usePushNotifications";
+import { layoutStyles as styles } from "../assets/styles/shared.styles";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -52,7 +53,7 @@ export default function RootLayout() {
   if (!fontsLoaded || isCheckingAuth) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <SafeScreen>
           <Stack screenOptions={{ headerShown: false }}>

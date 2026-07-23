@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { Link } from "expo-router";
-import createStyles from "../../assets/styles/login.styles";
+import { createLoginStyles as createStyles } from "../../assets/styles/auth.styles";
 import { useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import useTheme from "../../hooks/useTheme";
@@ -36,7 +36,7 @@ export default function Login() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.keyboardAvoiding}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.container}>

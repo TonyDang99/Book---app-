@@ -4,16 +4,15 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
-  StyleSheet,
   Pressable,
 } from "react-native";
 import { useAuthStore } from "../../store/authStore";
 import { useRouter } from "expo-router";
 
 import { Image } from "expo-image";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import styles from "../../assets/styles/home.styles";
+import { createHomeStyles as createStyles } from "../../assets/styles/books.styles";
 import { fetchApi } from "../../lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import { formatPublishDate } from "../../lib/utils";
@@ -27,6 +26,7 @@ export default function Home() {
   const { token } = useAuthStore();
   const router = useRouter();
   const { colors, isDarkMode } = useTheme();
+  const styles = useMemo(() => createStyles(colors, isDarkMode), [colors, isDarkMode]);
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,14 +78,7 @@ export default function Home() {
 
   const renderItem = ({ item }) => (
     <View
-      style={[
-        styles.bookCard,
-        {
-          backgroundColor: colors.cardBackground,
-          borderColor: colors.border,
-          shadowOpacity: isDarkMode ? 0.22 : 0.1,
-        },
-      ]}
+      style={styles.bookCard}
     >
       <View style={styles.bookHeader}>
         <View style={styles.userInfo}>
@@ -97,22 +90,22 @@ export default function Home() {
           >
             <Image source={{ uri: item.user.profileImage }} style={styles.avatar} />
           </Pressable>
-          <Text style={[styles.username, { color: colors.textPrimary }]}>{item.user.username}</Text>
+          <Text style={styles.username}>{item.user.username}</Text>
         </View>
       </View>
 
       <Pressable
-        style={[styles.bookImageContainer, { backgroundColor: colors.border }]}
+        style={styles.bookImageContainer}
         onPress={() => router.push(`/book/${item._id}`)}
       >
         <Image source={item.image} style={styles.bookImage} contentFit="cover" />
       </Pressable>
 
       <View style={styles.bookDetails}>
-        <Text style={[styles.bookTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+        <Text style={styles.bookTitle}>{item.title}</Text>
         <View style={styles.ratingContainer}>{renderRatingStars(item.rating)}</View>
-        <Text style={[styles.caption, { color: colors.textDark }]}>{item.caption}</Text>
-        <Text style={[styles.date, { color: colors.textSecondary }]}>
+        <Text style={styles.caption}>{item.caption}</Text>
+        <Text style={styles.date}>
           Shared on {formatPublishDate(item.createdAt)}
         </Text>
       </View>
@@ -128,7 +121,7 @@ export default function Home() {
           name={i <= rating ? "star" : "star-outline"}
           size={16}
           color={i <= rating ? "#f4b400" : colors.textSecondary}
-          style={{ marginRight: 2 }}
+          style={styles.ratingStar}
         />
       );
     }
@@ -138,7 +131,7 @@ export default function Home() {
   if (loading) return <Loader />;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       <FlatList
         data={books}
         renderItem={renderItem}
@@ -157,15 +150,12 @@ export default function Home() {
         onEndReachedThreshold={0.1}
         ListHeaderComponent={
           <View style={styles.header}>
-            <View style={themeStyles.headerTop}>
-              <Text style={[styles.headerTitle, themeStyles.headerTitle, { color: colors.primary }]}>
+            <View style={styles.headerTop}>
+              <Text style={[styles.headerTitle, styles.headerTitleWithToggle]}>
                 BookWorm 
               </Text>
               <ThemeToggle />
             </View>
-            {/* <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              Discover great reads from the community👇
-            </Text> */}
           </View>
         }
         ListFooterComponent={
@@ -176,10 +166,10 @@ export default function Home() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="book-outline" size={60} color={colors.textSecondary} />
-            <Text style={[styles.emptyText, { color: colors.textPrimary }]}>
+            <Text style={styles.emptyText}>
               No recommendations yet
             </Text>
-            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+            <Text style={styles.emptySubtext}>
               Be the first to share a book!
             </Text>
           </View>
@@ -188,18 +178,3 @@ export default function Home() {
     </View>
   );
 }
-
-const themeStyles = StyleSheet.create({
-  headerTop: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 8,
-  },
-  headerTitle: {
-    flex: 1,
-    marginBottom: 0,
-  },
-});

@@ -1,6 +1,288 @@
 import { StyleSheet } from "react-native";
 
-const createStyles = (colors, isDarkMode = false) =>
+// Home feed
+export const createHomeStyles = (colors, isDarkMode = false) =>
+  StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.background,
+  },
+  listContainer: {
+    padding: 16,
+    paddingBottom: 80,
+  },
+  header: {
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontFamily: "JetBrainsMono-Medium",
+    letterSpacing: 0.5,
+    color: colors.primary,
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
+  headerTop: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 8,
+  },
+  headerTitleWithToggle: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  bookCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: 16,
+    marginBottom: 20,
+    padding: 16,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDarkMode ? 0.22 : 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bookHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  userInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
+  },
+  username: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  bookImageContainer: {
+    width: "100%",
+    height: 200,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 12,
+    backgroundColor: colors.border,
+  },
+  bookImage: {
+    width: "100%",
+    height: "100%",
+  },
+  bookDetails: {
+    padding: 4,
+  },
+  bookTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginBottom: 6,
+  },
+  ratingContainer: {
+    flexDirection: "row",
+    marginBottom: 8,
+  },
+  ratingStar: {
+    marginRight: 2,
+  },
+  caption: {
+    fontSize: 14,
+    color: colors.textDark,
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  date: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 40,
+    marginTop: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
+  footerLoader: {
+    marginVertical: 20,
+  },
+  });
+
+// Create book
+export const createBookFormStyles = (colors, isDarkMode = false) =>
+  StyleSheet.create({
+    keyboardAvoiding: {
+      flex: 1,
+    },
+    container: {
+      flexGrow: 1,
+      backgroundColor: colors.background,
+      padding: 16,
+    },
+    scrollViewStyle: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    card: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: 16,
+      padding: 20,
+      marginVertical: 16,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDarkMode ? 0.22 : 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    header: {
+      alignItems: "center",
+      marginBottom: 24,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    form: {
+      marginBottom: 16,
+    },
+    formGroup: {
+      marginBottom: 20,
+    },
+    label: {
+      fontSize: 14,
+      marginBottom: 8,
+      color: colors.textPrimary,
+      fontWeight: "500",
+    },
+    inputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.inputBackground,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+    },
+    inputIcon: {
+      marginRight: 10,
+    },
+    input: {
+      flex: 1,
+      height: 48,
+      color: colors.textDark,
+    },
+    textArea: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 12,
+      height: 100,
+      color: colors.textDark,
+    },
+    ratingContainer: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      alignItems: "center",
+      backgroundColor: colors.inputBackground,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 8,
+    },
+    starButton: {
+      padding: 8,
+    },
+    imagePicker: {
+      width: "100%",
+      height: 200,
+      backgroundColor: colors.inputBackground,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: "hidden",
+    },
+    previewImage: {
+      width: "100%",
+      height: "100%",
+    },
+    placeholderContainer: {
+      width: "100%",
+      height: "100%",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    placeholderText: {
+      color: colors.textSecondary,
+      marginTop: 8,
+    },
+    button: {
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      height: 50,
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      marginTop: 16,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDarkMode ? 0.22 : 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    buttonText: {
+      color: colors.white,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    buttonIcon: {
+      marginRight: 8,
+    },
+  });
+
+// Book detail
+export const createBookDetailStyles = (colors, isDarkMode = false) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -68,6 +350,9 @@ const createStyles = (colors, isDarkMode = false) =>
     ratingContainer: {
       flexDirection: "row",
       marginBottom: 16,
+    },
+    ratingStar: {
+      marginRight: 4,
     },
     captionCard: {
       backgroundColor: colors.cardBackground,
@@ -473,5 +758,3 @@ const createStyles = (colors, isDarkMode = false) =>
       textAlign: "center",
     },
   });
-
-export default createStyles;

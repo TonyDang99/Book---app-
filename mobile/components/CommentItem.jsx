@@ -14,6 +14,12 @@ import { fetchApi } from "../lib/api";
 import { buildOptimisticReaction } from "../lib/reactions";
 import { formatPublishDate } from "../lib/utils";
 import {
+  getOpacityStyle,
+  getReactionBadgeStyle,
+  getScaleStyle,
+  getTextColorStyle,
+} from "../assets/styles/reactions.styles";
+import {
   REACTION_TYPES,
   REACTION_LABEL,
   REACTION_COLOR,
@@ -283,7 +289,7 @@ export default function CommentItem({
     >
       <Animated.View
         pointerEvents="none"
-        style={[styles.targetCommentBorder, { opacity: targetBorderOpacity }]}
+        style={[styles.targetCommentBorder, getOpacityStyle(targetBorderOpacity)]}
       />
       <Pressable
         onPress={() => comment.user?._id && router.push(`/user/${comment.user._id}`)}
@@ -319,7 +325,7 @@ export default function CommentItem({
             <Animated.View
               style={[
                 styles.reactionActionWrap,
-                { transform: [{ scale: reactionActionScale }] },
+                getScaleStyle(reactionActionScale),
               ]}
             >
               <Pressable
@@ -351,7 +357,9 @@ export default function CommentItem({
                 {activeReaction ? (
                   <ReactionArtwork type={activeReaction} size={16} />
                 ) : null}
-                <Text style={[styles.reactionActionText, { color: actionColor }]}>{actionLabel}</Text>
+                <Text style={[styles.reactionActionText, getTextColorStyle(actionColor)]}>
+                  {actionLabel}
+                </Text>
               </Pressable>
             </Animated.View>
           </GestureDetector>
@@ -374,7 +382,7 @@ export default function CommentItem({
           <Animated.View
             style={[
               styles.reactionSummary,
-              { transform: [{ scale: reactionSummaryScale }] },
+              getScaleStyle(reactionSummaryScale),
             ]}
           >
             <View style={styles.reactionIconsRow}>
@@ -383,19 +391,14 @@ export default function CommentItem({
                   key={type}
                   style={[
                     styles.reactionBadge,
-                    {
-                      backgroundColor: colors.cardBackground,
-                      borderColor: colors.border,
-                      marginLeft: index > 0 ? -8 : 0,
-                      zIndex: 3 - index,
-                    },
+                    getReactionBadgeStyle(colors, index),
                   ]}
                 >
                   <ReactionArtwork type={type} size={18} />
                 </View>
               ))}
             </View>
-            <Text style={[styles.reactionCount, { color: colors.textSecondary }]}>
+            <Text style={[styles.reactionCount, getTextColorStyle(colors.textSecondary)]}>
               {comment.totalReactions}
             </Text>
           </Animated.View>

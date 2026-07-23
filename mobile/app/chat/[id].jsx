@@ -21,7 +21,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import createStyles from "../../assets/styles/messages.styles";
+import { createMessagingStyles as createStyles } from "../../assets/styles/communication.styles";
 import Loader from "../../components/Loader";
 import useTheme from "../../hooks/useTheme";
 import { fetchApi } from "../../lib/api";

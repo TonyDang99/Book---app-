@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import createStyles from "../../assets/styles/signup.styles";
+import { createSignupStyles as createStyles } from "../../assets/styles/auth.styles";
 import { Ionicons } from "@expo/vector-icons";
 import useTheme from "../../hooks/useTheme";
 import { useMemo, useState } from "react";
@@ -36,7 +36,7 @@ export default function Signup() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.keyboardAvoiding}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.container}>

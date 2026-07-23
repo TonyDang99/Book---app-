@@ -122,7 +122,7 @@ export default function Profile() {
           name={i <= rating ? "star" : "star-outline"}
           size={14}
           color={i <= rating ? "#f4b400" : colors.textSecondary}
-          style={{ marginRight: 2 }}
+          style={styles.ratingStar}
         />
       );
     }

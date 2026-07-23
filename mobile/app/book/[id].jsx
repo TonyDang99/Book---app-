@@ -17,7 +17,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import createStyles from "../../assets/styles/detail.styles";
+import { createBookDetailStyles as createStyles } from "../../assets/styles/books.styles";
 import useTheme from "../../hooks/useTheme";
 import { useAuthStore } from "../../store/authStore";
 import { fetchApi } from "../../lib/api";
@@ -330,7 +330,7 @@ export default function BookDetail() {
           name={i <= rating ? "star" : "star-outline"}
           size={20}
           color={i <= rating ? "#f4b400" : colors.textSecondary}
-          style={{ marginRight: 4 }}
+          style={styles.ratingStar}
         />
       );
     }

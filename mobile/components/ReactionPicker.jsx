@@ -11,7 +11,6 @@ import {
   Animated,
   Easing,
   Pressable,
-  StyleSheet,
   Text,
   useWindowDimensions,
   View,
@@ -21,11 +20,22 @@ import * as Haptics from "expo-haptics";
 import ReactionArtwork from "./ReactionArtwork";
 import { REACTION_LABEL, REACTION_TYPES } from "../constants/reactions";
 import { getReactionGestureState } from "../lib/reactions";
+import {
+  reactionPickerStyles as styles,
+  EDGE_PADDING,
+  EXPANDED_ICON_OVERFLOW,
+  PICKER_GAP,
+  PICKER_HEIGHT,
+  getActiveOptionStyle,
+  getIdleAnimationConfig,
+  getOptionEntranceAnimationStyle,
+  getOptionHoverAnimationStyle,
+  getOptionIdleAnimationStyle,
+  getOptionWidthStyle,
+  getPickerAnimationStyle,
+  getTooltipAnimationStyle,
+} from "../assets/styles/reactions.styles";
 
-const EDGE_PADDING = 12;
-const PICKER_HEIGHT = 52;
-const PICKER_GAP = 9;
-const EXPANDED_ICON_OVERFLOW = 80;
 const EXIT_DURATION = 70;
 const HOVER_DISMISS_DELAY = 180;
 
@@ -156,124 +166,44 @@ function ReactionOption({
   };
 
   const isActive = activeReaction === type;
-  const idleRotation =
-    {
-      like: "-2deg",
-      love: "0deg",
-      care: "4deg",
-      haha: "-4deg",
-      wow: "1deg",
-      sad: "-2deg",
-      angry: "-5deg",
-    }[type] || "-2deg";
-  const idleLift = { care: -2.5, haha: -3.5, wow: -2, sad: -1.5, angry: -1 }[type] || -1.5;
-  const idlePeakScale = { care: 1.06, haha: 1.1, wow: 1.11, sad: 1.04, angry: 1.06 }[type] || 1.035;
+  const {
+    rotation: idleRotation,
+    lift: idleLift,
+    peakScale: idlePeakScale,
+  } = getIdleAnimationConfig(type);
   return (
     <Animated.View
       style={[
         styles.optionEntrance,
         highlighted && styles.optionHighlighted,
-        {
-          opacity: entranceProgress,
-          transform: [
-            {
-              translateY: entranceProgress.interpolate({
-                inputRange: [0, 1],
-                outputRange: [24, 0],
-              }),
-            },
-            { translateX: reflowX },
-            {
-              scale: entranceProgress.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.68, 1],
-              }),
-            },
-          ],
-        },
+        getOptionEntranceAnimationStyle(entranceProgress, reflowX),
       ]}
     >
       <Animated.View
         style={[
           styles.optionWidth,
-          { width: baseWidth },
+          getOptionWidthStyle(baseWidth),
         ]}
       >
         <Animated.View
           pointerEvents="none"
           style={[
             styles.tooltip,
-            {
-              backgroundColor: "rgba(30, 30, 30, 0.9)",
-              shadowColor: colors.black,
-              opacity: hoverProgress,
-              transform: [
-                {
-                  translateY: hoverProgress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [6, 0],
-                  }),
-                },
-                {
-                  scale: hoverProgress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1],
-                  }),
-                },
-              ],
-            },
+            getTooltipAnimationStyle(colors.black, hoverProgress),
           ]}
         >
           <Text style={styles.tooltipText}>{REACTION_LABEL[type]}</Text>
         </Animated.View>
 
-        <Animated.View
-          style={{
-            transform: [
-              {
-                translateY: hoverProgress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, -28],
-                }),
-              },
-              {
-                scale: hoverProgress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 2.2],
-                }),
-              },
-            ],
-          }}
-        >
+        <Animated.View style={getOptionHoverAnimationStyle(hoverProgress)}>
           <Animated.View
-            style={{
-              transform: [
-                {
-                  scale: restingProgress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [1, 0.85],
-                  }),
-                },
-                {
-                  translateY: idleProgress.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [0, idleLift, 0],
-                  }),
-                },
-                {
-                  rotate: idleProgress.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: ["0deg", idleRotation, "0deg"],
-                  }),
-                },
-                {
-                  scale: idleProgress.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [1, idlePeakScale, 1],
-                  }),
-                },
-              ],
-            }}
+            style={getOptionIdleAnimationStyle(
+              restingProgress,
+              idleProgress,
+              idleLift,
+              idleRotation,
+              idlePeakScale
+            )}
           >
             <Pressable
               disabled={disabled}
@@ -284,7 +214,7 @@ function ReactionOption({
               onHoverOut={() => onHover(null)}
               style={[
                 styles.optionButton,
-                isActive && { backgroundColor: colors.inputBackground },
+                isActive && getActiveOptionStyle(colors.inputBackground),
               ]}
               accessibilityRole="button"
               accessibilityLabel={REACTION_LABEL[type]}
@@ -467,16 +397,13 @@ function ReactionPicker({
         <Animated.View
           style={[
             styles.picker,
-            {
-              left: position.left,
-              top: position.top,
-              width: position.width,
-              backgroundColor: colors.cardBackground,
-              borderColor: colors.border,
-              shadowColor: colors.black,
-              opacity: containerOpacity,
-              transform: [{ translateY: containerTranslateY }, { scale: containerScale }],
-            },
+            getPickerAnimationStyle(
+              position,
+              colors,
+              containerOpacity,
+              containerTranslateY,
+              containerScale
+            ),
           ]}
         >
           <Pressable
@@ -674,77 +601,3 @@ export const useReactionPicker = () => {
   if (!context) throw new Error("useReactionPicker must be used inside ReactionPickerProvider");
   return context;
 };
-
-const styles = StyleSheet.create({
-  providerRoot: {
-    flex: 1,
-    position: "relative",
-    overflow: "visible",
-  },
-  overlayRoot: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1000,
-    elevation: 1000,
-  },
-  picker: {
-    position: "absolute",
-    height: PICKER_HEIGHT,
-    borderRadius: PICKER_HEIGHT / 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 7,
-    overflow: "visible",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    elevation: 16,
-  },
-  pickerHoverSurface: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    overflow: "visible",
-  },
-  optionEntrance: {
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "visible",
-  },
-  optionHighlighted: {
-    zIndex: 20,
-    elevation: 20,
-  },
-  optionWidth: {
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "visible",
-  },
-  optionButton: {
-    width: 42,
-    height: 42,
-    cursor: "pointer",
-    borderRadius: 21,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tooltip: {
-    position: "absolute",
-    top: -84,
-    zIndex: 30,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 11,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 24,
-  },
-  tooltipText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: "700",
-  },
-});

@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
-import createStyles from "../../assets/styles/messages.styles";
+import { createMessagingStyles as createStyles } from "../../assets/styles/communication.styles";
 import Loader from "../../components/Loader";
 import useTheme from "../../hooks/useTheme";
 import { fetchApi } from "../../lib/api";

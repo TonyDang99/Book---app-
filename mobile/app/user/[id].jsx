@@ -116,7 +116,7 @@ export default function UserProfile() {
           name={star <= rating ? "star" : "star-outline"}
           size={14}
           color={star <= rating ? "#f4b400" : colors.textSecondary}
-          style={{ marginRight: 2 }}
+          style={styles.ratingStar}
         />
       ))}
     </View>

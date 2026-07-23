@@ -13,7 +13,7 @@ import {
   Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
-import createStyles from "../../assets/styles/create.styles";
+import { createBookFormStyles as createStyles } from "../../assets/styles/books.styles";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "../../store/authStore";
 import useTheme from "../../hooks/useTheme";
@@ -168,7 +168,7 @@ export default function Create() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.keyboardAvoiding}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={styles.container} style={styles.scrollViewStyle}>

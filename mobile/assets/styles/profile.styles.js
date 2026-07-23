@@ -179,6 +179,9 @@ const createStyles = (colors, isDarkMode = false) =>
       flexDirection: "row",
       marginBottom: 4,
     },
+    ratingStar: {
+      marginRight: 2,
+    },
     bookCaption: {
       fontSize: 14,
       color: colors.textDark,
